@@ -1,0 +1,1449 @@
+
+% To compile this document
+% graphics.off();rm(list=ls());library('knitr');knit('R-lab.Rnw');  for(i in 1:2) system('R CMD pdflatex R-lab.tex');purl('R-lab.Rnw')
+
+
+
+% extract R-code
+% 
+
+\documentclass{article}
+
+<<style, echo=FALSE, results='asis'>>=
+BiocStyle::latex()
+@
+
+
+
+<<options, include=FALSE>>=
+options(digits=3, width=85, stringsAsFactors = TRUE )
+opts_chunk$set(echo=TRUE,tidy=FALSE,include=TRUE,
+               fig.path='Rlab-',dev='png', 
+		 fig.width = 12, fig.height = 9, comment = '#>', dpi = 300,
+		cache = TRUE, lazy.load = FALSE, background="grey93", message = FALSE )
+@
+
+
+\usepackage{amsmath}
+%%amssymb amsfonts
+\usepackage{natbib}
+\usepackage{mathpazo}
+\usepackage{soul}
+\usepackage{cases}
+\usepackage{xhfill}
+\usepackage[labelformat=empty]{caption}
+\setlength{\parindent}{0cm} 
+
+
+
+\begin{document}
+
+
+
+
+\title{\R{}--lab}
+\author{Bernd Klaus$^1$ \\[1em]European Molecular Biology Laboratory (EMBL),\\ Heidelberg, Germany\\
+\texttt{$^1$bernd.klaus@embl.de}}
+\maketitle
+\tableofcontents
+
+\section{Required packages and other preparations} \label{sec:prep}
+
+%
+<<required packages and data, echo = TRUE, cache = F>>=
+library(TeachingDemos)
+library(xlsx)
+library(multtest)
+library(Biobase)
+library(plyr)
+library(dplyr)
+library(ggplot2)
+@
+%
+
+
+
+\section{Introduction and getting help}
+
+
+\R{} is a software language for carrying out complicated (and simple) statistical analyses. It includes routines for data summary and exploration, graphical presentation and data modeling. The aim of this lab is to provide you with a basic fluency in the language. 
+When you work in \R{} you create objects that are stored in the current workspace (sometimes called image). Each object created remains in the image unless you explicitly delete it. At the end
+of the session the workspace will be lost unless you save it. 
+
+You can get your current working directory via \Rfunction{getwd()} and set it with 
+\Rfunction{setwd()}. By default, it is usually your home directory.
+
+Commands written in \R{} are saved in memory throughout the session. You can scroll back to
+previous commands typed by using the ``up'' arrow key (and ``down'' to scroll back again).
+ You finish an \R{} session by typing \Rfunction{q()}
+at which point you will also be prompted as to whether or not you want to save the current
+workspace into your working directory. If you do not want to, it will be lost. Remember the ways to get help: \\
+
+  \begin{itemize}
+    \item Just ask!
+    \item \Rfunction{help.start()} and the HTML help button in the Windows GUI.
+    \item \Rfunction{help} and \Rfunction{?}: \Rfunction{help("data.frame")} or \Rfunction{?help}.
+    \item \Rfunction{help.search()}, \Rfunction{apropos()}
+    \item \Rfunction{browseVignettes("package")}
+    \item rseek.org
+    \item use tab--completion in RStudio, this will also display help--snippets
+    \end{itemize}
+
+
+
+\section{Basics -- objects and arithmetic}
+
+\R{}  stores information in objects and operates on objects. The simplest objects are scalars, vectors and matrices.
+But there are many others: lists and data frames for example. In advanced use of \R{}  it can also be
+useful to define new types of objects, specific for particular application. We will stick with just the most commonly used objects here.
+An important feature of \R{}   is that it will do different things on different types of objects. For
+example, type:
+
+%
+<<ex-O-1, echo = TRUE>>=
+4 + 6
+@
+%
+So, \R{}  does scalar arithmetic returning the scalar value 10. In  fact, \R{} returns a vector of
+length 1 - hence the [1] denoting first element of the vector.
+We can assign objects values for subsequent use. For example:
+
+%
+<<ex-O-2, echo = TRUE>>=
+x <- 6
+y <- 4
+z <- x+y
+z
+@
+%
+would do the same calculation as above, storing the result in an object called z. We can look at
+the contents of the object by simply typing its name. At any time we can list the objects which we have created:
+%
+<<ex-O-3, echo = TRUE>>=
+ls()
+@
+%
+Notice that \Robject{ls} is actually an object itself. Typing \Rfunction{ls} would result in a display of the contents of
+this object, in this case, the commands of the function. The use of parentheses, \Rfunction{ls()}, ensures that
+the function is executed and its result --- in this case, a list of the objects in the current environment --- displayed.
+More commonly, a function will operate on an object, for example
+%
+<<ex-O-4, echo = TRUE>>=
+sqrt(16)
+@
+%
+calculates the square root of 16. Objects can be removed from the current workspace with the 
+function \Rfunction{rm()}. There are many standard functions available in \R{}, 
+and it is also possible to create new ones. Vectors can be created in \R{} in a number of ways.
+ We can describe all of the elements:
+%
+<<ex-O-5, echo = TRUE>>=
+z <- c(5,9,1,0)
+@
+%
+
+Note the use of the function \Rfunction{c} to concatenate or ``glue together'' individual elements. This function
+can be used much more widely, for example
+
+<<ex-O-5b, echo = TRUE>>=
+x <- c(5,9)
+y <- c(1,0)
+z <- c(x,y)
+@
+%
+
+would lead to the same result by gluing together two vectors to create 
+a single vector.
+Sequences can be generated as follows:
+
+
+%
+<<ex-O-6, echo = TRUE>>=
+seq(1,9,by=2)
+seq(8,20,length=6)
+@
+%
+These examples illustrate that many functions in \R{} have optional arguments, in this case, either
+the step length or the total length of the sequence (it doesn't make sense to use both). If you leave
+out both of these options, \R{} will make its own default choice, in this case assuming a step length
+of 1. So, for example,
+
+%
+<<ex-O-7, echo = TRUE>>=
+x <- seq(1,10)
+@
+%
+also generates a vector of integers from 1 to 10.
+At this point it's worth mentioning the help facility again. 
+If you don't know how to use a function,
+or don't know what the options or default values are, 
+type \Rfunction{help(functionname)} 
+or  simply \Rfunction{?functionname} where 
+\Rfunction{functionname} is the name of the function you are interested in. 
+This will usually help and will often include
+examples to make things even clearer.
+Another useful function for building vectors is the \Rfunction{rep} command for repeating things.
+Examples:
+%
+<<ex-O-8, echo = TRUE>>=
+rep(1:3,6)
+## repeat each element six times
+rep(1:3,c(6,6,6))
+## simplified
+rep(1:3,rep(6,3))
+@
+%
+As explained above, \R{} will often adapt to the objects it is asked to work on. An example is the 
+vectorized arithmetic used in \R{}:
+%
+<<vec>>=
+x <- 1:5; y <- 5:1
+x
+y
+x + y
+x^2
+# another example
+x <- c(6,8,9)
+y <- c(1,2,4)
+x + y
+x * y
+@  
+%
+showing that \R{} uses component-wise arithmetic on vectors. \R{} will also try to make sense if objects
+are mixed. For example,
+%
+<<vec-2>>=
+x <- c(6,8,9)
+x + 2
+@  
+%
+Two particularly useful functions worth remembering are \Rfunction{length} which returns the length of a
+vector (i.e. the number of elements it contains) and \Rfunction{sum} which calculates the sum of the elements
+of a vector. \R{} also has basic calculator capabilities:
+
+
+\begin{itemize}
+\item \texttt{a+b, a-b, a$*$b, a$\;\hat{\,}\;$b (or a**b), a $\%\%$ b (a MOD b)}
+\item additionally: \texttt{sqrt(a), sin(a)} ...
+\item and some simple statistics: 
+\begin{itemize}
+\item  \texttt{ mean(a)}
+\item  \texttt{ summary(a)}
+\item  \texttt{ var(a)}
+\item   \texttt{ min(a,b), max(a,b)}
+\end{itemize}
+\end{itemize}
+
+
+
+\subsubsection*{Exercise: Simple \R{} operations}
+\begin{enumerate}[label=(\emph{\alph*})]
+ \item  Define
+\Robject{ x <- c(4,2,6) } and
+\Robject{ y <- c(1,0,-1) }
+Decide what the result will be of the following:
+
+\begin{enumerate}[label=(\emph{\alph*})] 
+\item \Robject{ length(x) }
+\item \Robject{ sum(x) }
+\item \Robject{ sum(x\textasciicircum 2) }
+\item \Robject{ x+y }
+\item\Robject{ x*y }
+\item \Robject{ x-2 }
+\item \Robject{ x\textasciicircum 2 }
+\end{enumerate}
+
+Use \R{} to check your answers.
+
+ \item  Decide what the following sequences are and use \R{} to check your answers:
+ \begin{enumerate}[label=(\emph{\alph*})] 
+ \item \Robject{ 7:11 }
+ \item  \Robject{ seq(2,9) }
+ \item  \Robject{ seq(4,10,by=2) }
+ \item  \Robject{ seq(3,30,length=10) }
+ \item  \Robject{ seq(6,-4,by=-2) }
+ \end{enumerate}
+ 
+ \item  Determine what the result will be of the following \R{} expressions, and then use \R{} to check
+you are right:
+ \begin{enumerate}[label=(\emph{\alph*})] 
+ \item  \Robject{ rep(2,4) }
+ \item  \Robject{ rep(c(1,2),4) }
+ \item \Robject{ rep(c(1,2),c(4,4)) }
+ \item \Robject{ rep(1:4,4) }
+ \item  \Robject{ rep(1:4,rep(3,4)) }
+ \end{enumerate}	
+ \item  Use the rep function to define simply the following vectors in \R{}.
+ \begin{enumerate}[label=(\emph{\alph*})] 
+ \item\Robject{  6,6,6,6,6,6 }
+ \item \Robject{  5,8,5,8,5,8,5,8 }
+ \item \Robject{  5,5,5,5,8,8,8,8 }
+\end{enumerate}
+\end{enumerate}
+
+
+
+
+
+\subsubsection*{Exercise: \R{} as a calculator}
+Calculate the following expression, 
+where \Robject{x} and \Robject{y} have values \Robject{-0.25} and \Robject{2} 
+respectively. 
+Then store the result in a new variable and print its content. 
+%
+<<calcEx, eval = FALSE>>=
+x + cos(pi/y)
+@   
+%
+
+
+
+
+\section{Summaries, subscripting and useful vector functions}
+
+Let's suppose we've collected some data from an experiment and stored them 
+in an object \Robject{x}.
+Some simple summary statistics of these data can be produced:
+
+<<summary-1,   echo = TRUE>>=
+x <- c(7.5,8.2,3.1,5.6,8.2,9.3,6.5,7.0,9.3,1.2,14.5,6.2)
+mean(x)
+var(x)
+summary(x)
+@
+It may be, however, that we subsequently learn that the first
+6 data points correspond to measurements made in one experiment, 
+and the second six on another experiment.
+This might suggest summarizing the two sets of data separately, so we would need to extract from
+\Robject{x} the two relevant subvectors. This is achieved by subscripting:
+
+<<subscr,   echo = TRUE>>=
+x[1:6]
+x[7:12]
+summary(x[1:6])
+summary(x[7:12])
+@
+
+Other subsets can be created in the obvious way. For example:
+
+<<subscr-2,   echo = TRUE>>=
+x[c(2,4,9)]
+x[-(1:6)]
+# compare to 
+x[7:12]
+@
+
+Additionally, there are some useful commands to order and sort vectors
+\begin{itemize}
+\item  \texttt{{sort}}:  sort in increasing order
+\item  \texttt{{order}}: orders the indexes is such a way that the elements
+of the vector are sorted, i.e \Rfunction{sort(v) =  v[order(v)]} 
+
+\item  \texttt{{rank}}: gives the ranks of the elements
+of a vector, different options for handling  \textit{ties} are
+available. 
+\end{itemize}
+
+<<sort-rank,   echo = TRUE>>=
+x <- c(1.3,3.5,2.7,6.3,6.3)
+sort(x)
+order(x)
+x[order(x)]
+rank(x)
+@
+
+
+
+\subsubsection*{Exercise}
+\begin{enumerate}[label=(\emph{\alph*})] 
+ \item Define
+\Robject{x <- c(5,9,2,3,4,6,7,0,8,12,2,9) } 
+
+
+Decide what the result will be of the following:
+
+	\begin{enumerate}[label=(\emph{\alph*})] 
+	\item \Robject{ x[2] }
+	\item \Robject{ x[2:4] }
+	\item \Robject{ x[c(2,3,6)] }
+	\item \Robject{ x[c(1:5,10:12)] }
+	\item\Robject{ x[-(10:12)] }
+	\end{enumerate}
+
+Use \R{} to check your answers.
+
+
+ 
+ \item   The \Robject{ y <- c(33,44,29,16,25,45,33,19,54,22,21,49,11,24,56)} contain sales of milk
+in liters for 5 days in three different shops (the first 3 values are for shops 1,2 and 3 on
+Monday, etc.). Produce a statistical summary of the sales for each day of the week and also
+for each shop.
+
+\end{enumerate}
+
+\section{Classes, modes and types of objects}
+\R{} is an object-oriented language, so every data item is an object in \R{}.
+As in other programming languages, objects are instances of ``blue-prints'' called classes.
+There are the following elementary types or (``modes''): \\
+
+\begin{enumerate}[label=(\emph{\alph*})] 
+
+\item numeric: real number
+\item character: chain of characters, text
+\item factor: String or numbers, describing certain categories
+\item logical: TRUE, FALSE
+\item special values:  NA (missing value), NULL (``empty object''),
+ Inf,  -Inf (infinity), NaN (not a number) 
+\end{enumerate} 
+
+Data storage types includes matrices, lists and data frames, which will be introduced
+in the next section. Certain types can have different subtypes, e.g. numeric
+can be further subdivided into the integer, single and double types. Types
+can be checked by the \Rfunction{is.*} and changed (``casted'') by the 
+\Rfunction{as.*} functions. Furthermore, the function
+\Rfunction{str} is very useful in order to obtain an overview of an (possibly
+complex) object at hand. The following examples will make this clear:
+
+
+%
+<<object-examples,   echo = TRUE>>=
+#assign value "9" to an object
+a <- 9
+# is a a string?
+is.character(a) 
+# is a a number?
+is.numeric(a) 
+# What's its type?
+typeof(a)
+# now turn it into a factor
+a <- as.factor(a)
+# Is it a factor?
+is.factor(a)
+# assign an string to a: 
+a <- "NAME"
+# what's a?
+class(a)
+str(a) 
+@
+%
+
+\section{Matrices, lists,  data frames and basic data handling}
+\subsection{Matrices}
+Matrices can be created in \R{}  in a variety of ways. Perhaps the simplest is to create the columns
+and then glue them together with the command \Rfunction{cbind}. For example,
+
+%
+<<cbind-ex,   echo = TRUE>>=
+x <- c(5,7,9)
+y <- c(6,3,4)
+z <- cbind(x,y)
+z
+## dimensions: 3 rows and 2 columns
+dim(z)
+### matrix constructor
+z <- matrix(c(5,7,9,6,3,4),nrow=3)
+@
+%
+There is a similar command, \Rfunction{rbind}, for building matrices by
+gluing rows together.
+The functions \Rfunction{cbind} and \Rfunction{rbind} can also be applied to matrices themselves 
+(provided the dimensions match) to form larger matrices. Matrices can also be built by explicit construction 
+via the function matrix. Notice that the dimension of the matrix is  determined
+by the size of the vector and the requirement that the number of rows is 3 in the example above, as specified by the
+argument \Robject{nrow=3}. As an alternative we could have specified the number of columns with the
+argument \Robject{ncol=2} (obviously, it is unnecessary to give both). Notice that the matrix is ``filled up''
+column-wise. If instead you wish to fill up row-wise, add the option \Robject{byrow=T}. For example:
+
+ 
+%
+<<Matrix-ex,   echo = TRUE>>=
+z <- matrix(c(5,7,9,6,3,4),nr=3,byrow=T)
+z
+@
+%
+Notice that the argument  \Robject{nrow} has been abbreviated to  \Robject{nr}. 
+Such abbreviations are always possible for function arguments provided it induces 
+no ambiguity -- if in doubt always use the full
+argument name. As usual, \R{} will try to interpret operations on matrices in a natural way. 
+For example, with z
+as above, and
+%
+<<Matrix-op,   echo = TRUE>>=
+y <- matrix(c(1,3,0,9,5,-1),nrow=3,byrow=T)
+y
+y + z
+y * z
+@
+%
+Notice that multiplication here is component--wise rather than conventional matrix multiplication. 
+Indeed, conventional matrix multiplication is undefined for \Robject{y} and \Robject{z} as 
+the dimensions fail to match. Actual matrix multiplication works like this:
+%
+<<Matrix-op-2,   echo = TRUE>>=
+x <- matrix(c(3,4,-2,6),nrow=2,byrow=T)
+x
+y %*% x
+@
+%
+
+Other useful functions on matrices are  \Rfunction{t} to calculate a matrix 
+transpose and  \Rfunction{solve} to calculate inverses:
+
+%
+<<Matrix-op-3,   echo = TRUE>>=
+t(z)
+solve(x)
+@
+%
+As with vectors it is useful to be able to extract sub-components of matrices. In this case, we
+may wish to pick out individual elements, rows or columns. As before, the \Rfunction{[ ]} 
+notation is used to subscript. The following examples should make things clear:
+%
+<<Matrix-op-4,   echo = TRUE>>=
+z[1,1]
+z[,2]
+z[1:2,]
+z[-1,]
+z[-c(1,2),]
+@
+%
+
+So, in particular, it is necessary to specify which rows and columns are required, whilst omitting
+the integer for either dimension implies that every element in that dimension is selected.
+
+
+\subsubsection*{Exercise: Matrix operations}
+\begin{enumerate}[label=(\emph{\alph*})]
+\item Call \texttt{?matrix} to consult the \R{} help on matrices.
+\item Create the variables $a=3$ and  $b=4.5$.
+\item Test whether  $a$ and $b$ are numeric or strings.
+\item Create the following matrices
+\[ A = \left( \begin{array}{ccc}
+1 & 2 & 3 \\
+4 & 5 & 6 \\
+7 & 8 & 10 \end{array} \right)
+\quad 
+B = \left( \begin{array}{ccc}
+1 & 4 & 7 \\
+2 & 5 & 8 \\
+3 & 6 & 9 \end{array} \right)
+\quad 
+y = \left( \begin{array}{c}
+ 1 \\
+ 2 \\
+ 3 \end{array} \right)
+\] 
+\item Calculate
+\begin{itemize}
+\item $a^2+1/b$
+\item $a*A \quad$ Multiplication with a scalar
+\item $A*B \quad$ Matrix multiplication (\R{}--command \texttt{\%*\%} )
+\item Invert and transpose $A$.  (\R{}--commands  \texttt{solve} and  \texttt{t()} )
+\item Fill the first row of $B$ with ones
+\end{itemize}
+\item Access the second element of the third column of  $A$  and the third element
+of the second column of $B$.
+\item Multiply the first row of $A$ with the second column of $B$.  
+\end{enumerate}
+
+
+
+
+\subsection{Data frames and lists}
+
+\subsubsection*{Data frames -- ``excel tables''}
+A data frame is essentially a matrix where the columns can have different data types.
+As such, it is usually used to represent a whole data set, where the rows
+represent the samples and columns the variables. Essentially, you can think
+of a data frame as an excel table.
+
+This way columns are named
+and can be accessed by their name. If the rows have names, they can be be accessed
+by their names as well.
+Internally, a data frame is represented
+by a list.\\
+
+Let's illustrate this by the small data set
+saved in comma--separated-format (csv) ---
+\Robject{patients}. We load it in from a website using the function
+\Rfunction{read.csv}, which is used to read a data file in \textit{comma
+separated format --- csv} into \R{}. In a .csv--file the data 
+are stored row--wise, and the entries in each row are separated by commas. 
+
+%
+<<load-Patients,   echo = TRUE>>=
+pat <- read.csv("http://www-huber.embl.de/users/klaus/BasicR/Patients.csv")
+pat
+str(pat)
+
+colnames(pat)
+### equivalent
+names(pat)
+
+rownames(pat)
+
+### a factor
+pat$Gender
+@
+%
+
+
+
+It has weight, height and gender of three people. Notice that Gender is coded
+as a \Rfunction{factor}, which is the standard data type for categorical data.
+
+\warning{be careful about the \Rcode{StringsAsFactors} option} 
+
+When creating a \Robject{data.frame} strings are automatically coded as factors.
+This behavior is often not desirable and very often this setting causes problems.
+In order to turn it off, it is best to set \Rcode{ options(stringsAsFactors = FALSE)}
+globally or to specify this explicitly in the creation of the data frame as in:
+
+<<>>=
+pat <- read.csv("http://www-huber.embl.de/users/klaus/BasicR/Patients.csv",
+              stringsAsFactors = FALSE)
+### not a factor
+pat$Gender
+
+@
+
+However, when fitting regression models it is in general
+necessary to have the covariates as factors to obtain correct design
+matrices and model fits.
+
+% The  \Rfunction{attach()} places the variable in a data frame to the \R{}
+% search path. This can be undone with  \Rfunction{detach()}. (Use \Rfunction{search()}
+% to list the search path).\\
+
+We can also use the function \Rfunction{read.xlsx} from the \CRANpkg{xlsx} 
+package to read in the data from an excel sheet. The \Robject{sheetIndex} 
+specifies which subsheet of the file we want to read in. \bioccomment{The 
+packages requires a java installation. If it does not work, check this 
+first.}
+
+<<load-Patients-excel,   echo = TRUE>>=
+pat.xls<-read.xlsx("Patients.xls", sheetIndex=1)
+pat.xls
+str(pat.xls)
+@
+
+If you want to get the (row--) indexes of table entries with a certain property, you can use 
+the function  \Rfunction{which()} via \Rfunction{which(<condition>)},
+where \Rfunction{<condition>} is a logical condition composed using
+logical operators: 
+
+
+
+\begin{itemize}
+\item  \texttt{{Variable == value}}: equal
+\item  \texttt{{Variable != value}}: un--equal
+\item  \texttt{{Variable < value}}: less
+\item  \texttt{{Variable > value}}: greater
+\item  \texttt{{$ \& $}}: \textit{and}
+\item  \texttt{{$ \mid $}}: \textit{or}
+\item  \texttt{{$ ! $}}: negation
+\item  \texttt{{$ \%in\% $}}: is element?
+\end{itemize}
+
+We can illustrate the usage  with the patient data. There are multiple ways to 
+achieve the same output, of which using the \Rfunction{subset} function is the 
+most general one  and works also with other objects. 
+%
+<<which-patients,   echo = TRUE>>=
+## which patients are  less than 1.5 tall?
+which(pat$Height<1.5) 
+## How tall are they?
+pat[which(pat$Height<1.5),]
+### recommended alternative that is less error prone
+pat[pat$Height<1.5,]
+### access by rownames
+low.height.rows <- subset(rownames(pat), pat$Height<1.5)
+low.height.rows
+pat[low.height.rows,]
+### access via subset
+subset(pat, Height<1.5)
+@
+%
+
+\subsubsection*{Lists}
+
+Lists can be viewed as  data frames with ``columns'' of possibly unequal length.
+although the elements of a list are 
+not really ordered in columns anymore, but are
+rather a collection of vectors that don't have to be of
+the same length. List elements can either be accessed by their name
+or their position via a double bracket operator \Rfunction{[[]]}
+
+
+%
+<<list-example,   echo = TRUE>>=
+L = list(one=1, two=c(1,2), five=seq(1, 4, length=5))
+L
+names(L)
+ L$five + 10
+## equivalent
+L[[3]] + 10
+@
+%
+
+Since data frames are just special lists, they can be accessed in the same way
+
+
+%
+<<list-example-2,   echo = TRUE>>=
+pat$Height
+#equivalent
+pat[[1]]
+@
+%
+
+\subsection{Apply functions}
+
+A very useful class of functions in \R{} are  
+\Rfunction{apply} commands, which  allows to apply a function to every row or column of
+a data matrix, data frame or list:
+
+\begin{center}
+\Rfunction{ apply(X, MARGIN, FUN, ...) }
+\end{center}
+
+\begin{itemize} 
+\item \Rfunction{ MARGIN:} 1 (row-wise) or 2 (column-wise) 
+\item \Rfunction{ FUN:} The function to apply 
+\end{itemize}
+
+The dots argument allows you to specify additional arguments that will be
+passed to \Rfunction{FUN}. \\
+
+Special apply are functions include: \Rfunction{lapply} (lists),
+ \Rfunction{sapply} (lapply
+wrapper trying to convert the result into a vector or matrix),
+\Rfunction{tapply} and aggregate (apply according to factor groups). \\
+
+We can illustrate this again  using the patients data set:
+
+%%
+<<apply-example,   echo = TRUE>>=
+# Calculate mean for each of the first two columns
+sapply(X = pat[,1:2], FUN = mean, na.rm = TRUE)
+# Mean height separately for each gender
+tapply(X = pat$Height, FUN = mean, INDEX = pat$Ge) 
+
+@
+%@
+%%
+
+Data handling can be much more elegantly performed by the \CRANpkg{plyr} 
+and \CRANpkg{dplyr} packages, which will be introduced in another lab.
+
+\subsubsection*{Exercise: Handling a small data set}
+
+\begin{enumerate}[label=(\emph{\alph*})]
+\item Read in the data set \file{Patients.csv} from the website  \\
+
+\url{http://www-huber.embl.de/users/klaus/BasicR/Patients.csv} \\
+
+
+\item Check whether the read in data is  actually a \texttt{data.frame}.
+\item Which variables are stored in the data frame and what are their values?
+\item Is there a missing weight value?  If yes, replace it by the mean of the other weight values.
+\item Calculate the mean weight and height of all the patients.  
+\item Calculate the $\text{BMI}= \text{Weight} / \text{Height}^2$  of all the patients.
+Attach the BMI vector to the data frame using the function \texttt{cbind}.
+
+\end{enumerate}
+
+
+
+
+\section{Plotting in \R{}}
+
+
+\subsection{Plotting in base \R{}}
+
+The default command for plotting is  \Rfunction{plot()}, there are other specialized
+ commands like \Rfunction{hist()} or 
+\Rfunction{pie()}. 
+A collection of such specialized commands (e.g. heatmaps and CI plots) can be found in the package \CRANpkg{gplots}. 
+Another useful visualization package is \CRANpkg{LSD}, which includes a heat--scatterplot.
+The general \Rfunction{plot} command looks like this:
+ 
+\begin{center}
+\Rfunction{plot(x, y, type, main, par (...) )}
+\end{center}
+
+\begin{itemize}
+\item \Rcode{x:} x--axis data
+\item \Rcode{y:} y--axis data (may be missing)
+\item \Rcode{type=l,p,h,b } display lines / points / horizontal lines ...
+\item \Rcode{main:} plot heading
+\item \Rcode{par (...)  }  additional graphical parameters, see ?par for
+more info $\dots$ 
+\end{itemize}
+
+The function \Rcode{plot()} creates the plot. Additional lines, points and so
+on can be added by  \R{} commands of the same name:   \Rcode{lines()} 
+and \Rcode{points()}. The command \Rcode{pdf} will open a pdf document
+as a ``graphical device'', subsequently everything will be plotted to the pdf. 
+With  \Rcode{dev.off()} the device will be closed and the pdf will be viewable.
+A new graphical device can be opened by  \Rcode{dev.new()}. This allows
+you to create a new plot without overwriting the current active one.  
+With the graphical option \Rcode{par ( mfrow=c(<no.rows>, <no.columns>) )}
+you can produce an array of plots. \\
+
+
+As a comprehensive example, the following code produces 
+a sine / cosine plot and colors it:
+
+%
+<<plot-example,   echo = TRUE>>=
+#pdf(file="plot-example.pdf", width=12, height=6)
+x <- seq(-3,3, by = 0.1); y <- cos(x); z <- sin(x)
+plot(x,y, type="l", col="darkviolet", main="Cos and Sin")
+points(x, rep(0, length(x)), pch=3)
+lines(x,z, type="l", col="magenta")
+legend("topleft", c("cos","sin"), col=c("darkviolet",
+"magenta"), lty=1)
+#dev.off()
+@
+%
+
+
+
+
+
+
+
+\subsection{\CRANpkg{ggplot2} and \CRANpkg{qplot}}
+
+There's a quick plotting function in \CRANpkg{ggplot2} called \Rfunction{qplot()}
+which is meant to be similar to the \Rfunction{plot()} function from base graphics. 
+You can do a lot with \Rfunction{qplot()}, including splitting plots by factors, 
+but in order to understand how {\CRANpkg{ggplot2}  works, it is better  to approach
+it from from the layering syntax.
+
+All \CRANpkg{ggplot2} plots begin with the function \Rfunction{ggplot()}. 
+\Rfunction{ggplot()} takes two primary 
+arguments, \Robject{data} is the data frame containing the data to be plotted
+and \Rfunction{aes( )} are the aesthetic mappings to pass on to the plot elements.
+
+As you can see, the second argument, \Rfunction{aes()}, isn't a normal argument, but another 
+function. Since we'll never use \Rfunction{aes()} as a separate function, it might be best
+to think of it as a special way to pass a list of arguments to the plot.
+
+The first step in creating a plot is to add one or more layers. Let's start with 
+the iris data set as an example. Note that \CRANpkg{ggplot2} always requires the specification
+of the data frame from which the variables used in the plot are drawn.
+
+
+<<ggplot-ex1>>=
+    summary(iris)
+    p <- ggplot(iris, aes(Sepal.Length, Sepal.Width) )
+@
+
+If you just type \Rcode{p} or \Rcode{print(p)}, you'll get back a warning saying
+that the plot lacks  any layers. With the \Rfunction{ggplot()} function, 
+we've set up a plot which is going to draw from the iris data, 
+the Sepal.length variable will be mapped to the x--axis, and the Sepal.width
+variable is going to be mapped to the y--axis. 
+However, we have not determined which kind of geometric object will represent the data. 
+Let's add points, for a scatterplot.
+
+<<ggplot-ex2>>=
+ p + geom_point() 
+@
+
+Alternatively, this plot could have been produced with \Rfunction{qplot}.
+Additionally, you can map color to the species. 
+
+
+<<ggplot-ex-qplot, fig.width=8, fig.height=6>>=
+qplot(Sepal.Length, Sepal.Width, data = iris, color = Species)
+
+@
+
+We clearly see that the  setosa plants have different Sepal.Length/Sepal.Width 
+relationship compared to the other two species. The full documentation for \CRANpkg{ggplot2} can be found at \url{http://docs.ggplot2.org/current/}.
+Apart from mapping data to aesthetics, \CRANpkg{ggplot2} 
+can handle statistical transformations of the data, i.e. easily create all 
+the nice exploratory graphics we will look at below.
+
+We will explore one of these transformations by adding a regression line
+to the data of each of the three plant species as a third layer.
+
+
+<<ggplot-ex-smoother>>=
+ggsmooth <- (qplot(Sepal.Length, Sepal.Width, data = iris, color = Species)
++ stat_smooth(method = "lm"))
+ggsmooth 
+@
+
+The command \Rfunction{stat\textunderscore smooth} first adds a statistical transformation
+to the existing data and then plots it using a certain geometry, in this
+case a special "smooth" geometry that is tailored to the plotting of regression
+fits. You can obtained the statistical transformations by looking at the saved
+plot and extracting the appropriate sublist. 
+
+<<ggplot-ex-transformation, results ='hide', fig.keep = 'none'>>=
+transformed.data <- as.list(print(ggsmooth))$data[[2]]
+@
+
+Thus, you could also map the transformed data differently than the default geometry
+does it. This however does not make much sense in this case.
+
+\subsection*{\Rfunction{qplot} and its most important options}
+
+\Rfunction{qplot} can be used much like plot, but has some additional features
+that are very useful, like facetting or coloring by condition. It represents
+an easy way to get started with \CRANpkg{ggplot2}.
+
+\begin{center}
+\Rfunction{
+qplot(x, y = NULL, ..., data, facets = NULL, 
+  NA), ylim = c(NA, NA), log = "", main = NULL,
+  xlab = deparse(substitute(x)), ylab = deparse(substitute(y)))
+}
+\end{center}
+
+
+\begin{itemize}
+\item \Rcode{x:} x--axis data
+\item \Rcode{y:} y--axis data (may be missing)
+\item \Rcode{data:}  \Robject{data.frame} containing the variables used in the plot 
+\item \Rcode{facets= } split the plot into facets, use a formula like
+. \textasciitilde split to do wrapped splitting and row  \textasciitilde columns to split by rows and columns
+\item \Rcode{main:} plot heading
+\item \Rcode{color, fill} set to factor/string in the data set in order to
+color the plot depending on that factor. Use \Rcode{I("colorname")} to use a
+specific color.
+\item \Rcode{geom} specify a ``geometry'' to be used in the plots, examples
+include point, line, boxplot, histogram etc.
+\item \Rcode{xlab, ylab, xlim, ylim} set the x--/y--axis parameters
+\end{itemize}
+
+
+
+\subsubsection*{Exercise: Plotting the normal density}
+
+The density of the normal distribution  with  expected value $\mu$ 
+and variance $\sigma^2$ is given by:
+\[
+f(x) 
+= \frac{1}{\sigma^2 \sqrt{\pi}} \exp \left(- \frac{1}{2} (\frac{x- \mu}{\sigma})^2  \right)
+\]
+ In \R{} it is implemented in the  function
+\texttt{dnorm}.
+\begin{enumerate}[label=(\emph{\alph*})]
+\item Call the  \R{} help to find out how to calculate density values. 
+\item Determine the values of the standard normal distribution density  ($\mu=0$ and $\sigma^2=1$) 
+at $ -2, -1.8, -1.6, \ldots, +2 $ and save it in a vector \texttt{stand.normal}.
+\item Plot the results obtained in the last exercise, play a bit with the plotting options!
+
+\item use \Rfunction{qplot}  to produce the same plot and change the 
+color of the density line using \Rcode{color=I("darkgreen")}.
+\end{enumerate}
+
+\section{Calling  functions and programming}
+\subsection{Calling  functions}
+Every \R{}--function is following the pattern below:
+\begin{center}
+\texttt{{function.name(arguments, optional arguments) }}
+\end{center}
+
+
+\begin{itemize}
+\item  \texttt{{arguments}}: Some function arguments  are necessary to  run the function
+\item  \texttt{{optional arguments}}:  Some function arguments can be changed, 
+		otherwise the default values are used. They are indicated by an equals sign.
+\item  \texttt{{?function.name}}: Getting help
+\item  \texttt{{function.name}}: Source code
+\end{itemize}
+
+As an example, look at the mean command:
+
+\begin{center}
+\texttt{mean(x, trim = 0, na.rm = FALSE)}
+\end{center}
+
+\begin{itemize}
+\item  \texttt{{x}}: Data 
+\item  \texttt{{trim = 0}}: Trimmed mean  (mean of the data without  $x\%$ 
+of extreme values) 
+\item  \texttt{{na.rm = FALSE}}: Remove missing values?
+\end{itemize}
+
+Here, \Robject{x} (usually a vector)
+has to be given in order to run the function,
+while the other arguments such as \Robject{trim} are optional, 
+i.e. if you do not change
+them, their default values are used.
+
+
+\subsection{Creating your own functions}
+You can create your own functions very easily by adhering to the following
+template \\\
+
+
+
+\texttt{{function.name<-function(arguments, options) $\{$ }} \\
+\texttt{{ ... \\
+... \\
+return(...)
+$ \} $ }}
+
+
+
+\begin{itemize}
+\item  \texttt{{ $\{\quad\} $ }}: The source code of the  function has
+to be in curly brackets 
+\item By default \R{} 
+returns the result of the last line of the function,  you can specify the return 
+value directly with \texttt{{return(\hspace{0.1cm})}}. If you want to return
+multiple values, you can return a list.
+
+\end{itemize}
+
+As example, we look at the following currency converter function
+
+
+<<curr-conv,   echo = TRUE, eval = TRUE>>=
+euro.calc<-function(x, currency="US") {
+  ## currency has a default argrument "US"
+  if(currency=="US") return(x*1.33)
+  if(currency=="Pounds") return(x*0.85)
+}
+euro.calc(100) ## how many dollars are 100 Euros?
+@
+
+Here \Robject{x} is a formal argument, necessary to
+ execute the function.
+\Robject{currency:} is an optional argument, set to ``US'' by default.
+
+\subsection{Flow control}
+\R{} offers the typical options for flow--control known from many other
+languages. 
+
+The most important one, the \textbf{if--statement} is used when certain computations should
+only be performed if a certain condition is met (and maybe something else should be performed
+when the condition is not met):
+
+%
+<<if-example,   echo = TRUE, eval = TRUE>>=
+w= 3
+	if( w < 5 ){
+	d=2
+	}else{
+	d=10
+	}
+d
+@
+%
+
+If you want do a computation for every entry of a list,
+ you usually do  the computations for one time step and then for
+the next and the next, etc. Because nobody wants 
+to type the same commands over and over again,
+these computations are automated in  \textbf{for--loops}.
+An example:
+
+%
+<<for-example,   echo = TRUE, eval = TRUE>>=
+h <- seq(from = 1, to = 8)
+s <- integer() # create empty integer vector
+	for(i in 2:10)
+	{
+	s[i] <- h[i] * 10
+	}
+s
+@
+
+Another useful command is the \textbf{ifelse--command}, it replaces 
+elements of a vector based on the evaluation of
+another logical vector of the same size. This is useful to replace missing
+values, or to binarize a vector.
+
+<<ifelse-example,   echo = TRUE, eval = TRUE>>=
+s <- seq(from = 1, to = 10)
+binary.s <- ifelse(s > 5, "high", "low")
+binary.s
+@
+
+
+\subsubsection*{Exercise: Base calling errors}
+The function \texttt{readError(noBases)}  simulates the base calling 
+  errors of a sequencing machine. The parameter
+ \texttt{noBases}  represents the  number of positions in the genome sequenced
+ and the function will return a vector, which has the entry ``error'' if a base 
+ calling error occurs at a certain position and ``correct'' if  the base is 
+ read correctly. It can be obtained with the command \\
+
+\Rfunction{source("http://www-huber.embl.de/users/klaus/BasicR/readError.R")} \\
+
+\begin{enumerate}[label=(\emph{\alph*})] 
+\item Let the sequencer read a thousand positions and try to infer a base calling 
+error rate from this simulation
+HINT: The functions  \texttt{table}  and \texttt{prop.table} could be handy for this!
+\item Let us assume the technology improves and the machine is less prone to  errors.
+Change the function accordingly!
+\end{enumerate}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Answers to exercises}
+
+\subsubsection*{Exercise: Simple \R{} operations}
+
+ Use the rep function to define simply the following vectors in \R{}.
+ \begin{enumerate}[label=(\emph{\alph*})] 
+ \item\Robject{  6,6,6,6,6,6 }
+ \item \Robject{  5,8,5,8,5,8,5,8 }
+ \item \Robject{  5,5,5,5,8,8,8,8 }
+\end{enumerate}
+
+
+\subsubsection*{Solution: Simple \R{} operations}
+
+<<sol-1,   echo = TRUE, results='hide'>>=
+rep(6,6)
+rep(c(5,8),4)
+c(rep(5,4), rep(8,4))
+@
+
+\xhrulefill{BiocBlue}{1pt}
+
+\subsubsection*{Exercise: \R{} as a calculator}
+Calculate the following expression, 
+where \Robject{x} and \Robject{y} have values \Robject{-0.25} and \Robject{2} respectively. 
+Then store the result in a new variable and print its content. 
+%
+<<calcExerc, results='hide'>>=
+x + cos(pi/y)
+@   
+%
+
+
+\subsubsection*{Solution: \R{} as a calculator}
+
+<<sol-2,   echo = TRUE, results='hide'>>=
+x <-  -0.25
+y <- 2
+x + cos(pi/y)
+@
+
+\xhrulefill{BiocBlue}{1pt}
+
+\subsubsection*{Exercise: milk sales}
+ The \Robject{ y<-c(33,44,29,16,25,45,33,19,54,22,21,49,11,24,56)} contain sales of milk
+in liters for 5 days in three different shops (the first 3 values are for shops 1,2 and 3 on
+Monday, etc.). Produce a statistical summary of the sales for each day of the week and also
+for each shop.
+
+
+\subsubsection*{Solution: milk sales}
+
+<<sol-3,   echo = TRUE, results = 'hide'>>=
+y <- c(33,44,29,16,25,45,33,19,54,22,21,49,11,24,56)
+# day of the week summary, example: Tuesday
+Tuesday <- y[ (1:3) + 3 ]
+summary(Tuesday)
+## Shop 2 summary 
+Shop2 <- y[ seq(2, length(y), by = 3 )  ]
+summary(Shop2)
+@
+
+\xhrulefill{BiocBlue}{1pt}
+
+\subsubsection*{Exercise: matrix operations}
+\begin{enumerate}[label=(\emph{\alph*})]
+\item Call \texttt{?matrix} to consult the \R{} help on matrices.
+\item Create the variables $a=3$ and  $b=4.5$.
+\item Test whether  $a$ and $b$ are numeric or strings.
+\item Create the following matrices
+\[ A = \left( \begin{array}{ccc}
+1 & 2 & 3 \\
+4 & 5 & 6 \\
+7 & 8 & 10 \end{array} \right)
+\quad 
+B = \left( \begin{array}{ccc}
+1 & 4 & 7 \\
+2 & 5 & 8 \\
+3 & 6 & 9 \end{array} \right)
+\quad 
+y = \left( \begin{array}{c}
+ 1 \\
+ 2 \\
+ 3 \end{array} \right)
+\] 
+\item Calculate
+\begin{itemize}
+\item $a^2+1/b$
+\item $a*A \quad$ Multiplication with a scalar
+\item $A*B \quad$ Matrix multiplication (\R{}--command \texttt{\%*\%} )
+\item Invert and transpose $A$.  (\R{}--commands  \texttt{solve} and  \texttt{t()} )
+\item Fill the first row of $B$ with ones
+\end{itemize}
+\item Access the second element of the third column of  $A$  and the third element
+of the second column of $B$.
+\item Multiply the first row of $A$ with the second column of $B$.  
+\end{enumerate}
+
+
+
+\subsubsection*{Solution: matrix operations}
+
+<<sol-Matrix,   echo = TRUE, eval = FALSE>>=
+#b
+########################################################################
+a <- 3
+b <- 4.5
+
+#c
+########################################################################
+
+is.numeric(a)
+is.character(b)
+
+#d
+########################################################################
+
+A <- matrix(seq(1,9), nrow = 3, byrow = TRUE )
+A[3,3] <- 10
+#A<-matrix(c(1,2,3,4,5,6,7,8,10),nrow=3)
+
+B <- matrix(seq(1,9), nrow = 3, byrow = FALSE)
+#B<-matrix(c(1,2,3,4,5,6,7,8,10),nrow=3, byrow=TRUE)
+ 
+
+y<-matrix(c(1,2,3), nrow=3)
+
+#e
+########################################################################
+a^2 + 1 /b
+a*A
+A %*% B
+
+det(A)
+#if the determinant of a matrix is zero, it cannot be inverted 
+solve(A)
+t(A)
+
+#f
+########################################################################
+
+A[2,3]
+B[3,2]
+
+#g
+########################################################################
+
+# element-wise
+#A[1,]*B[,2]
+
+# a^T * b
+A[1,]%*%B[,2]
+
+# b^T*a
+fr.A <- as.matrix(A[1,])
+sc.B <- as.matrix(t(B[,2]))
+
+fr.A %*% sc.B
+
+@
+
+\xhrulefill{BiocBlue}{1pt}
+
+\subsubsection*{Exercise: Handling a small data set}
+
+\begin{enumerate}[label=(\emph{\alph*})]
+\item Read in the data set \file{Patients.csv} from the website  \\
+
+\url{http://www-huber.embl.de/users/klaus/BasicR/Patients.csv} \\
+
+
+\item Check whether the read in data is  actually a \texttt{data.frame}.
+\item Which variables are stored in the data frame and what are their values?
+\item Is there a missing weight value?  If yes, replace it by the mean of the other weight
+values.
+\item Calculate the mean weight and height of all the patients.  
+\item Calculate the $\text{BMI}= \text{Weight} / \text{Height}^2$  of all the patients.
+Attach the BMI vector to the data frame using the function \texttt{cbind}.
+
+\end{enumerate}
+
+
+\subsubsection*{Solution: Handling a small data set}
+<<apply-test,   echo = TRUE, results = 'hide'>>=
+#a
+########################################################################
+
+pat <- read.csv("http://www-huber.embl.de/users/klaus/BasicR/Patients.csv")
+pat
+
+#b
+########################################################################
+
+is.data.frame(pat)
+summary(pat)
+str(pat)
+
+#c
+########################################################################
+
+head(pat)
+pat
+str(pat)
+#d
+########################################################################
+
+summary(pat$Weight)
+#There is a NA value, which is easy to spot, since the data set 
+# is really small! 
+#Otherwise, just use the which()-Funktion ...
+which(is.na(pat$Weight))
+
+## other NA methods
+#?na.omit
+
+## remove  NAs from Weight
+na.omit(pat$Weight)
+
+#e
+########################################################################
+
+#Pay attention to access the data set directly ...
+pat[2,2] <- mean(pat$Weight, na.rm=TRUE)
+pat
+
+
+#f
+########################################################################
+
+BMI <- pat[,2] / pat[,1]^2
+
+### alternatively
+
+BMI = pat$Weight / pat$Height^2
+
+pat$Weight[2] = mean(pat$Weight, na.rm=TRUE)
+
+print(BMI)
+
+### attach BMI to the data frame
+pat <- cbind(pat, BMI)
+pat
+@
+
+\xhrulefill{BiocBlue}{1pt}
+
+\subsubsection*{Exercise: Plotting the normal density}
+
+The density of the normal distribution  with  expected value $\mu$ 
+and variance $\sigma^2$ is given by:
+\[
+f(x) 
+= \frac{1}{\sigma^2 \sqrt{\pi}} \exp \left(- \frac{1}{2} (\frac{x- \mu}{\sigma})^2  \right)
+\]
+ In \R{} it is implemented in the  function
+\texttt{dnorm}.
+\begin{enumerate}[label=(\emph{\alph*})]
+\item Call the  \R{} help to find out how to calculate density values. 
+\item Determine the values of the standard normal distribution density  ($\mu=0$ and $\sigma^2=1$) 
+at $ -2, -1.8, -1.6, \ldots, +2 $ and save it in a vector \texttt{stand.normal}.
+\item Plot the results obtained in the last exercise, play a bit with the plotting options!
+\item use \Rfunction{qplot}  to produce the same plot and change the 
+color of the density line using \Rcode{color=I("darkgreen")}.
+\end{enumerate}
+
+\subsubsection*{Solution: Plotting the normal density}
+<<sol-plot,   echo = TRUE, eval = FALSE>>=
+x <- seq(from=-2, to=2, by=0.2)
+length(x)
+x
+stand.normal <- dnorm(x, mean=0, sd=1)
+# or: stand.normal<-dnorm(x)
+length(stand.normal)
+stand.normal
+
+#visualize it
+#
+plot(x,stand.normal, type="l")
+
+plot(x,stand.normal, type="b")
+plot(x,stand.normal, type="h", col = "darkgreen")
+plot(x,stand.normal, type="h", col = "darkgreen", main = "Standard Normal Density")
+
+# use qplot
+qplot(x, stand.normal, color = I("darkgreen"))
+@
+
+\xhrulefill{BiocBlue}{1pt}
+
+\subsubsection*{Exercise: Base calling errors}
+The function \texttt{readError(noBases)}  simulates the base calling 
+  errors of a sequencing machine. The parameter
+ \texttt{noBases}  represents the  number of positions in the genome sequenced
+ and the function will return a vector, which has the entry ``error'' if a base 
+ calling error occurs at a certain position and ``correct'' if  the base is 
+ read correctly. It can be obtained with the command \\
+
+\Rfunction{source("http://www-huber.embl.de/users/klaus/BasicR/readError.R")} \\
+
+\begin{enumerate}[label=(\emph{\alph*})] 
+\item Let the sequencer read a thousand positions and try to infer a base calling 
+error rate from this simulation
+HINT: The functions  \texttt{table}  and \texttt{prop.table} could be handy for this!
+\item Let us assume the technology improves and the machine is less prone to  errors.
+Change the function accordingly!
+\end{enumerate}
+
+\subsubsection*{Solution: Read errors}
+<<sol-read,   echo = TRUE, results = 'hide'>>=
+#a
+########################################################################
+
+source("http://www-huber.embl.de/users/klaus/BasicR/readError.R")
+
+test <- readError(1000)
+## number of errors
+sum(test == "error")
+##  error probability
+sum(test == "error") / 1000
+
+prop.table(table(test))
+
+
+#b
+########################################################################
+readError2 <- function(noBases){
+
+  positions <- integer(noBases) ## initialize vector
+		for(i in 1:noBases){	
+		positions[i] <- rbinom(n=1, size = 1, prob = 0.05)
+		}
+  return(ifelse(positions, "correct", "error"))
+	}
+
+
+
+### equivalent function
+rbinom(n=1000, size =1, prob = 0.05)
+@
+
+
+
+
+
+
+
+\xhrulefill{BiocBlue}{1pt}
+
+\section*{Session Info}
+
+<< sessionInfo, cache=FALSE, results='asis'>>=
+toLatex(sessionInfo())
+@
+
+\end{document}

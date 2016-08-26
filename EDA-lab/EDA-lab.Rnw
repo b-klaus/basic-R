@@ -1,0 +1,1447 @@
+% To compile this document
+% graphics.off();rm(list=ls());library('knitr');knit('EDA-lab.Rnw');  for(i in 1:2) system('R CMD pdflatex EDA-lab.tex');purl('EDA-lab.Rnw')
+
+%detach(bodyfat);
+
+% extract R-code
+% 
+
+%setwd("/g/huber/users/klaus/uni/Teaching/EMBL-Teaching/Basic-R-Graphics/EDA-lab")
+
+
+\documentclass{article}
+
+
+<<style, echo=FALSE, results='asis'>>=
+BiocStyle::latex()
+@
+
+
+
+<<options, include=FALSE>>=
+options(digits=3, width=90, stringsAsFactors = FALSE)
+opts_chunk$set(echo=TRUE,tidy=FALSE,include=TRUE,
+               dev='png', fig.width = 8, fig.height = 6, comment = '#>  ',
+               dpi =300,	cache = T, background="grey93" )
+@
+
+
+\title{EDA--lab}
+\usepackage{amsmath}
+\usepackage{natbib}
+\usepackage{mathpazo}
+%\usepackage{enumerate}
+\usepackage{soul}
+\usepackage{cases}
+\setlength{\parindent}{0cm} 
+\usepackage{xhfill}
+\usepackage[labelformat=empty]{caption}
+
+\author{Bernd Klaus$^1$ \\[1em]European Molecular Biology Laboratory (EMBL),\\ Heidelberg, Germany\\
+\texttt{$^1$bernd.klaus@embl.de}}
+
+
+\begin{document}
+
+\maketitle
+
+
+\tableofcontents
+
+\section{Required packages and other preparations} \label{sec:prep}
+
+%
+<<required packages and data, echo = TRUE, cache=FALSE, warning=FALSE, message=FALSE>>=
+load(url("http://www-huber.embl.de/users/klaus/BasicR/seqZyx.rda"))
+library("TeachingDemos")
+data(golub, package = "multtest")
+library(biomaRt)
+library(reshape2)
+library(tidyr)
+library(ggplot2)
+library(dplyr)
+#library(xlsx)
+library(vioplot)
+library(beeswarm)
+@
+%
+
+
+\section{Introduction}
+
+In this lab, a few essential methods are given to display and visualize data. 
+It quickly answers questions like: How are my data distributed? How can the frequencies 
+of nucleotides from a gene be visualized? Are there outliers in my data?
+Does the distribution of my data resemble that of a bell--shaped curve? Are
+there differences between gene expression values taken from two groups of
+patients?\\
+
+The most important central tendencies (mean, median) are defined and
+illustrated together with the most important measures of spread (standard
+deviation, variance, inter quartile range, and median absolute deviation).
+
+We also introduce \CRANpkg{ggplot2} a package to produce elegant graphics
+for data analysis.
+
+\section{Base graphics and ggplot2}
+
+The package \CRANpkg{ggplot2} is one  of the most commonly used graphics packages for \R{}.
+It is an alternative to the basic graphic system of \R{}, which is limited in various
+aspects. In this lab we will use basic graphics in \R{}  and corresponding
+ \CRANpkg{ggplot2} plots side by side.
+
+\CRANpkg{ggplot2} is meant to be an implementation of the Grammar of Graphics, 
+developed by L. Wilkinson, hence gg--plot. 
+The basic notion is that there is a grammar to the composition of graphical components in 
+statistical graphics, and by directly controlling that grammar, you can generate 
+a large set of carefully constructed graphics tailored to your particular needs. 
+
+
+The central concept of the approach is that 
+plots convey information through various aspects of their aesthetics.
+Aesthetics are mappings from the data to something you can visually perceive.
+Some aesthetics that plots use are:
+
+\begin{itemize}
+  \item x position
+  \item y position
+  \item size of elements
+  \item shape of elements
+  \item color of elements
+\end{itemize}
+
+The elements in a plot are geometric shapes, like
+
+\begin{itemize}
+   \item points
+   \item  lines
+   \item line segments
+   \item bars
+    \item text
+\end{itemize}
+
+     
+
+Some of these geometries have their own particular aesthetics. For instance:
+
+\begin{itemize}
+    \item points
+\begin{itemize}
+     \item   point shape
+     \item   point size
+\end{itemize}
+   \item lines
+\begin{itemize}
+      \item  line type
+      \item  line weight
+\end{itemize}
+   \item bars
+\begin{itemize}
+      \item  y minimum
+      \item  y maximum
+      \item  fill color
+      \item  outline color
+\end{itemize}
+    \item text
+\begin{itemize}
+       \item label value
+\end{itemize}
+
+\end{itemize}
+
+Each component is added to the plot as a layer, hence you might start with 
+a simple mapping of the raw data to the x-- and y--axes, creating a scatterplot.
+A second layer may the be added by coloring the points according to a
+group they belong to and so on.
+
+There are other basics of these graphics that you can adjust, 
+like the scaling of the aesthetics, and the positions of the geometries.
+
+The values represented in the plot are the product of various statistics.
+If you just plot the 
+raw data, you can think of each point representing the identity statistic. 
+Many bar charts represent the mean or the median statistic. Histograms are bar charts 
+where the bars represent the binned count or density statistics and so on.
+
+\subsection{Building a plot layer by layer}
+
+There's a quick plotting function in \CRANpkg{ggplot2} called \Rfunction{qplot()}
+which is meant to be similar to the \Rfunction{plot()} function from base graphics. 
+You can do a lot with \Rfunction{qplot()}, but it can be better to approach
+the package from the layering syntax.
+
+All \CRANpkg{ggplot2} plots begin with the function \Rfunction{ggplot()}. 
+\Rfunction{ggplot()} takes two primary 
+arguments, \Robject{data} is the data frame containing the data to be plotted
+and \Rfunction{aes( )} are the aesthetic mappings to pass on to the plot elements.
+
+As you can see, the second argument, \Rfunction{aes()}, isn't a normal argument, but another 
+function. Since we'll never use \Rfunction{aes()} as a separate function, it might be best
+to think of it as a special way to pass a list of arguments to the plot.
+
+The first step in creating a plot is to add one or more layers. Let's start with 
+the iris data set as an example. Note that \CRANpkg{ggplot2} always requires the specification
+of the data frame from which the variables used in the plot are drawn.
+
+
+<<ggplot-ex1>>=
+    summary(iris)
+    p <- ggplot(iris, aes(Sepal.Length, Sepal.Width) )
+@
+
+If you just type \Rcode{p} or \Rcode{print(p)}, you'll get back a warning saying
+that the plot lacks  any layers. With the \Rfunction{ggplot()} function, 
+we've set up a plot which is going to draw from the iris data, 
+the Sepal.length variable will be mapped to the x--axis, and the Sepal.width
+variable is going to be mapped to the y--axis. 
+
+
+Thus, we have only created the data layer: first argument to \Rfunction{ggplot()}
+is a data frame (it must be a data frame), and its second argument is 
+\Rfunction{aes()}. You're never going to use \Rfunction{aes()} in any other 
+context except for inside of other \CRANpkg{ggplot2} functions,
+so it might be best not to think of \CRANpkg{aes()} as its own function, 
+but rather as a special way of defining data--to--aesthetic mappings.
+
+\subsection{Geometry layers}
+
+
+However, we have not determined which kind of geometric object will represent the data. 
+Let's add points, for a scatterplot.
+
+<<ggplot-ex2>>=
+ p + geom_point() 
+@
+
+
+There are a few things to take away from this step. 
+First and foremost, the way you add new layers, of any kind, 
+to a plot is with the \Rcode{+} operator. And, 
+there's no need to only add them one at a time. You can string 
+together any number of layers to add to a plot, separated by \Rcode{+}.
+
+The next thing to notice is that all layers you add to a plot are, technically, functions. 
+We didn't pass any arguments to \Rfunction{geom\textunderscore point()}, 
+so the resulting plot represents the default behavior: solid black circular points.
+
+If for no good reason at all we wanted to use a different point shape / color
+in the plot, we could specify it inside of \Rfunction{geom\textunderscore point()}.
+
+<<ggplot-geom-char-col>>=
+ p + geom_point(shape = 5, color = "coral3") 
+@
+
+
+Finally, note that we didn't need to tell \Rfunction{geom\textunderscore point()}
+about the $x$-- and $y$--axes. This may seem trivial, but it's a really important, 
+and powerful aspect of \CRANpkg{ggplot2}. When you add any layer at all to a plot, 
+it will inherit the data-to-aesthetic mappings which were defined in the data layer. 
+
+
+Alternatively, this plot could have been produced with \Rfunction{qplot}.
+Additionally, you can map color to the species. 
+
+
+<<ggplot-ex-qplot, fig.width=8, fig.height=6>>=
+qplot(Sepal.Length, Sepal.Width, data = iris, color = Species)
+
+@
+
+Here we also clearly see the difference between \textbf{mapping} to and \textbf{setting} 
+aesthetics. In the first plot, the shape and color are set to fixed values, while
+in the second plot, they are determined by a grouping of the data. If you want
+to set an aesthetic within \Rfunction{qplot}, you have to use the \Rcode{I()} operator:
+(for ``treat as is'')
+
+<<qplot-set-ex, fig.width=8, fig.height=6>>=
+qplot(Sepal.Length, Sepal.Width, data = iris, shape = Species,
+      color = I("coral3"))
+@
+
+
+
+In any case, we clearly see that the  setosa plants have 
+different Sepal.Length/Sepal.Width 
+relationship compared to the other two species.
+Apart from mapping data to aesthetics, \CRANpkg{ggplot2} 
+can handle statistical transformations of the data, i.e. easily create all 
+the nice exploratory graphics we will look at below.
+
+
+
+\subsection{Adding statistical transformations}
+Following the geometry, the next layer you add is usually a statistical 
+transformation.
+
+We will explore one of these transformations by adding a regression line
+to the data of each of the three plant species as a third layer. The 
+semi--transparent ribbon surrounding the solid line is the 95\% confidence interval.
+
+
+<<ggplot-ex-smoother>>=
+ggsmooth <- (qplot(Sepal.Length, Sepal.Width, data = iris, color = Species)
++ stat_smooth(method = "lm"))
+ggsmooth 
+@
+
+
+One important thing to realize is that it's not necessary to include 
+the points in order to add a smoothing line. Here's what the plot would
+look like with the  points omitted.
+
+
+<<ggplot-ex-smoother-only>>=
+ggsmoothPure <- (ggplot(iris, aes(x = Sepal.Length,  y = Sepal.Width, color = Species) )
++ stat_smooth(method = "lm"))
+ggsmoothPure 
+@
+
+The command \Rfunction{stat\textunderscore smooth} first adds a statistical transformation
+to the existing data and then plots it using a certain geometry, in this
+case a special "smooth" geometry that is tailored to the plotting of regression
+fits. You can obtain the statistical transformations by looking at the saved
+plot and extracting the appropriate sublist. 
+
+<<ggplot-ex-transformation, results ='hide', fig.keep = 'none'>>=
+transformed.data <- as.list(print(ggsmooth))$data[[2]]
+@
+
+Thus, you could also map the transformed data differently than the default geometry
+does it. This however does not make much sense in this case.
+
+
+\subsection{Summary of \CRANpkg{ggplot2} aesthetics} 
+
+
+In \CRANpkg{ggplot2}, aesthetics are the graphical elements
+which are mapped to data, and they are defined with \Rfunction{aes()}. 
+To some extent, the aesthetics you need to define are dependent 
+on the geometries you want to use, because line segments 
+have different geometric properties than points, for example. However, 
+there is also a great deal of uniformity in the aesthetics used across geometries. 
+Here is a list of the most common aesthetics you'll want to define.
+
+
+
+\begin{itemize}
+    \item{\Rcode{x}} x--axis location
+
+    \item{\Rcode{y}} y--axis location 
+    
+    \item{\Rcode{color}} The color of lines, points, and the outside borders of two dimensional 
+    geometries (polygons, bars, etc.).
+    
+    \item{\Rcode{fill}}  The fill color of two dimensional geometries.
+    
+    \item{\Rcode{size}} The size of points, 
+    or the weight of lines and borders of two dimensional geometries.
+    
+    \item{\Rcode{shape}} This is specific to points, and defines the point shape. 
+    This is one of the few aesthetics to which you can't map a continuous variable.
+    
+    \item{\Rcode{linetype}} This defines the line type of any kind of line, path, or border 
+    of a two dimensional geometry. This is another aesthetic 
+    which cannot be mapped to a continuous variable.
+    
+    \item{\Rcode{alpha}}  This defines the opacity of any geometric property. It's less    
+    commonly  mapped to data, and more often 
+    hard coded to a single value as a solution for overplotting.
+       
+    \item{\Rcode{xend, yend}} You'll use these more rarely, usually when plotting a line 
+    segment, or arrow. The beginning of the line segment will be located at x, y, 
+    and the end of the line segment will be located at xend, yend.
+    
+    \item{\Rcode{ymin, ymax, (xmin, xmax)}}
+    ymin and ymax are reserved for geometries which are devoted to representing
+    ranges of data, like error bars, and ribbons. For the most part, these will 
+    be expressed along the y-axis, but xmin and xmax are utilized for some geometries as 
+    well.
+
+
+The full documentation for \CRANpkg{ggplot2} can be found at \url{http://docs.ggplot2.org/current/}.
+
+\end{itemize}
+
+
+\subsection{Grouping and inheritance of aesthetics} 
+
+When we added the regression lines to the iris scatterplot above, we saw that 
+they were automatically split up by species. This is because subsequent layers 
+added to the plot inherit aesthetics defined in the \Rfunction{ qplot() / ggplot()} 
+data layer. However, we can override the inherited grouping by replacing 
+it explicitly:
+
+<<smoothInh>>=
+ggsmooth2 <- (qplot(Sepal.Length, Sepal.Width, data = iris, color = Species)
++ stat_smooth(method = "lm", aes(group = 1))) 
+ggsmooth2 
+@
+
+
+Note that geoms inherit aesthetic mappings from the \Rfunction{ qplot() / ggplot()}
+data layer and not from any other layer.
+
+<<smoothInh2>>=
+ggsmooth3 <- (qplot(Sepal.Length, Sepal.Width, data = iris, color = Species)
++ stat_smooth(method = "lm", aes(group = 1))) + geom_line()
+ggsmooth3 
+@
+
+Now, the lines that we added to the plot are colored by species, since
+the geometry inherits the grouping from the data layer and not from the 
+smoothing layer.
+
+
+\subsection{Color in \CRANpkg{ggplot2}}
+
+When you map a grouping variable to color, each point is  colored according to 
+the group it belongs to. \CRANpkg{ggplot2} will automatically generate
+a color palette of the right type and size, based on the data mapped to color, and 
+create a legend on the side of the plot. 
+
+As with everything, the specific color palette we use is adjustable. 
+The default \CRANpkg{ggplot2} color palette is rather clever, however. 
+Every color is  equidistant around an HSL color circle, 
+and has equal luminance. The idea is that no category should be 
+accidentally visually emphasized, but they can be hard for 
+some colorblind readers, and they will all print to the same shade of grey.
+
+If you don't like the default color scheme, there are other available 
+color palettes, and you can define your own. One really nice set of color palettes 
+comes from the package \CRANpkg{RColorBrewer}. You can explore the set of color 
+palettes available in it \href{http://colorbrewer2.org/}{here}.
+
+There are two very distinct kinds of color scales here: categorical and gradient. 
+The use of one over the other has everything to do with the kind of data which is 
+passed to color and fill, and they have their own specific customizations.
+
+If you are particularly picky, there is also 
+scale\textunderscore color\textunderscore manual(), 
+where you define an arbitrary list of colors to use. Here 
+are two examples of custom color definitions:
+
+<<color_examples>>=
+ggsmooth + scale_color_brewer(palette = "Dark2")
+ggsmooth + scale_color_manual(values=c(setosa = "tan3", 
+                                       versicolor = "chartreuse2", 
+                                       virginica = "hotpink"))
+@
+
+
+\subsection{An example: plotting experimental data}
+
+Here we're looking at some real biological data: different doses of HFG (a cytokine)
+were applied to cells and the downstream effect to the phosphorylation of  target
+proteins were assessed recording a time course--signal in different conditions.
+This data and the exercise ideas were provided by Lars Velten (Steinmetz lab). 
+We first  load  the data set.
+
+<<load-protein-data>>=
+proteins <- read.csv("http://www-huber.embl.de/users/klaus/BasicR/proteins.csv")[,-1]
+sample_n(proteins, 4)
+proteins_pMek <- subset(proteins, proteins$Target == "pMEK")
+proteins_pMek_sub <- subset(proteins_pMek, proteins_pMek$Condition == "10ng/mL HGF")
+@
+
+We can start simple by only looking at the first condition 
+of the "pMEK" protein target for now. We simply
+produce a line plot of the signal across time. In this plot
+we use the data  \Robject{proteins\textunderscore pMek\textunderscore sub},
+map \Robject{min} to the x--axis and \Robject{Signal} to the y--axis and use a 
+line a a geometry. Additional modifications are added to the plot
+in the exercise.
+
+<<plot-protein-data>>=
+proteins_pMek_sub
+qplot(min, Signal, data = proteins_pMek_sub, geom = "line")
+# or
+#ggplot(proteins_pMek_sub, aes(min, Signal)) + geom_line()
+@
+
+\subsubsection*{Exercise: Simple ggplot usage}
+ 
+Using the data \Robject{proteins\textunderscore pMek\textunderscore sub}, 
+do the following
+
+\begin{enumerate}[label=(\emph{\alph*})]
+
+\item Use points as a geometry instead of lines
+\item Use both lines and points
+\item Add errorbars \Robject{geom\textunderscore errorbar} to the plot.
+This requires  further aesthetics: 
+\Robject{ymax} and \Robject{ymin}. 
+The estimated error is stored in the variable \Robject{Sigma}.
+
+\end{enumerate}
+
+
+
+We can also easily plot all conditions for the protein pMEK by
+mapping color to the experimental condition of pMEK.
+
+
+<<plot-protein-data-2>>=
+qplot(min, Signal, data = proteins_pMek, geom = "line", color = Condition)
+# or
+#ggplot(proteins_pMek, aes(min, Signal, color = Condition) ) + geom_line()
+@
+
+\subsection{Setting axis limits}
+Another important aspect of data display are the limits of the 
+and \Robject{ylim()}. However, the overall scale will not be "retrained"
+and only be limited. This essentially results in plotting only a subset
+of the data, excluding values outside of the 
+limits. In order to actually "zoom--in" without excluding data points
+one has to use the  \Rfunction{coord\textunderscore cartesian()} command. In the
+code below, we first limit the y--axis to 1e9, excluding all
+other data points, then we retrain the scale.
+
+<<limitng vs zooming>>=
+## limit scale
+(qplot(min, Signal, data = proteins_pMek, geom = "line", color = Condition)
++ ylim(c(0,1e9)))
+## retrain scale
+(qplot(min, Signal, data = proteins_pMek, geom = "line", color = Condition)
++ coord_cartesian(ylim = c(0, 1e9)))
+@
+
+\subsection{Faceting}
+
+\CRANpkg{ggplot2} also allows you to easily split plots according to a factor 
+variable, plotting parts of the data in different panels. Returning
+to the iris data, we can easily plot different species in different 
+panels using \Rfunction{facet\textunderscore wrap()}. This is
+the simplest faceting function, splitting according to one
+factor only. 
+
+
+<<iris-panels>>=
+ggsmooth + facet_wrap( ~ Species)
+@
+
+The splitting is defined in a formula notation:
+yfactor \textasciitilde xfactor. Factors can also be combined,
+e.g.  yfactor \textasciitilde xfactor\textunderscore 1 + xfactor\textunderscore 2. 
+Faceting  can also be used with \Rfunction{qplot()}, there you always have
+to specify a two--sided formula. If you only want to use a single
+splitting factor, you can use the dot notation:
+
+<<iris-panels qplot>>=
+(qplot(Sepal.Length, Sepal.Width, data = iris, 
+color = Species, facets = . ~  Species))
+@
+
+
+\subsubsection*{Exercise: ggplot faceting}
+ 
+Using the data \Robject{proteins\textunderscore pMek}, 
+produce a plot split by the experimental condition factor using 
+\Rfunction{facet\textunderscore wrap()}. 
+
+
+
+\subsection{Gathering and spreading data frames}  
+
+The data table we loaded was already suitable for the plots we wanted 
+to produce since every line represents exactly one observation. 
+Thus, it was ``tidy'' and in a long format.
+
+However, this is not necessarily the case and we might want to represent
+the different time points by different columns, not just a single one.
+
+Our current data would is in a ``long'' format,
+but we might want to transform it into a ``wide'' format, with a separate 
+column for every time point. The package \CRANpkg{tidyr} allows 
+you to do this easily. \CRANpkg{ggplot2} usually requires ``long' formats, which can be
+obtained by using the function \Rfunction{gather}. Thus a  ``gathered''
+data frame in \CRANpkg{ggplot2} corresponds to a ``long'' format.  ``wide'' formats
+can be obtained using the function \Rfunction{spread}. As an example
+we will now represent every time point of our data frame as a single
+column. 
+
+Note that the wide format is only compatible with a single numerical target
+variable, so we only include signal as a variable here and remove the Sigma
+column. In some sense our data frame is not ``tidy enough'' making the removal
+of additional value column necessary.
+
+<<spread_example_tidyr,   echo = TRUE, eval = TRUE>>=
+proteins_spread <- proteins %>%
+  select(-Sigma) %>%
+  spread(key = min, value = Signal)
+
+ sample_n(proteins_spread, 4)
+@
+
+
+\CRANpkg{tidyr} has two main functions:
+
+\begin{itemize}
+  \item  \Rfunction{gather()} takes multiple columns,
+  and gathers them into key--value pairs: it  makes ``wide'' data longer.
+   \item  \Rfunction{spread()} takes two columns (key \& value) and 
+   spreads into multiple columns, it makes ``long'' data wider.
+\end{itemize}
+
+Since it works with key--value pairs, 
+\CRANpkg{tidyr} also provides the functions \Rfunction{separate()} and 
+\Rfunction{extract()}  which makes it easier to pull apart a column that 
+represent multiple variables. The complement to \Rfunction{separate()} 
+is \Rfunction{unite()}. 
+
+
+We can now ``gather'' the data frame again.  Again, we 
+use \CRANpkg{tidyr} to achieve this.
+We specify that we want to ``gather'' time columns again
+by excluding the \Robject{Target} and \Robject{Condition} columns.
+
+<<gahter_example,   echo = TRUE, eval = TRUE>>=
+proteins_gathered <- proteins_spread %>% 
+  gather(key = min, value = Signal, -Target, -Condition) 
+
+sample_n(proteins_gathered, 4)
+@
+ 
+
+\subsubsection*{Exercise: complex ggplot example}
+ 
+Use the data frame \Robject{proteins} to produce 
+a plot of the time courses  split by the experimental 
+target and colored according to the experimental 
+conditions. Add error bars to your plot.
+
+
+\section{Univariate data display}
+
+In order to study the distribution of data, various visualization methods are 
+available. We will look at some of them in the following.
+
+\subsection{Frequency table and barplot}
+
+Discrete data occur when the values naturally fall into categories. A frequency 
+table simply gives the number of occurrences within a category.
+
+\subsubsection*{Example: nucleotide frequencies } 
+A gene consists of a sequence of nucleotides $\{A, C, G, T \}$.
+The number of each nucleotide can be displayed in a frequency table. This
+will be illustrated by an Exon of the Zyxin gene, which plays an important role in cell
+adhesion. You can use the Bioconductor package \Biocpkg{biomaRt} to query
+various genomic databases. The  code below was originally used to retrieve the
+exon sequence. The command \Rfunction{strplit} splits the sequence into
+its single letter parts. We already loaded the sequence at the beginning of
+the lab.
+
+
+%
+<<ensembl-query, eval=FALSE>>=
+ensembl <-  useMart("ensembl",dataset="hsapiens_gene_ensembl")
+seqZyx <- getSequence(id = "ENSG00000159840", type = "ensembl_gene_id",  
+mart  <- ensembl, seqType = "gene_exon")[1,]
+seqZyx <- strsplit(as.character(seqZyx[1,1]), split = character(0))
+seqZyx <- seqZyx[[1]]
+save(seqZyx, file = "seqZyx.rda")
+@
+%
+
+A (frequency) table, a corresponding pie plot  and a barplot
+can be produced by following commands
+
+%
+<<Zyx-table>>=
+table(seqZyx) ## table
+prop.table(table(seqZyx)) ## frequency table
+barplot(table(seqZyx))
+@
+
+In \CRANpkg{ggplot2} we first  transform our data into an
+appropriate \Robject{data.frame}. Then a barplot can be conveniently created 
+via the \Rfunction{qplot} function that automatically picks a appropriate
+geometry based on the input data.
+
+
+<<Zyx-table-qplot>>=
+dataGG <- data.frame(bases = factor(seqZyx))
+ggBarplot <- qplot(bases, data = dataGG)
+ggBarplot
+
+@
+
+
+Alternatively, we can map the bases to the x--axis and add binning by using
+the bar geometry via the the function \Rfunction{ggplot}.
+
+<<Zyx-table-ggplot, eval=FALSE>>=
+ggBarplot <- ggplot(data = dataGG,  aes(x = bases))
+ggBarplot <- ggBarplot + xlab("") + geom_bar()
+ggBarplot
+@
+
+
+A pie--chart is easily created from the result of a table command in
+base \R{}
+
+<<Zyx-pie>>=
+pie(table(seqZyx))
+@
+
+
+In order to plot a pie chart with \CRANpkg{ggplot2}, we first need to create
+a bar that is filled according to the number of bases. In order to achieve this 
+we create a dummy factor for the x--axis and  map the binned base 
+counts to the fill aesthetic.
+
+<<Zyx-pie-ggplot1>>=
+dataGG <- data.frame(bases = factor(seqZyx))
+
+ggPie <- (qplot(x = factor(1), fill = bases, data = dataGG, xlab = NULL)
++ scale_x_discrete(breaks=NULL))
+ggPie
+@
+
+
+Now, we switch the y--axis to polar coordinates.
+
+<<Zyx-pie-ggplot2>>=
+ggPie + coord_polar(theta = "y")
+@
+
+
+
+\subsection{Scatterplots, stripcharts and beeswarms}
+An elementary method to visualize data is the so--called scatterplot,
+which simply plots two sets of data against each other or, if applied to a single
+data set, plots each data point of the set according to its index. \\
+
+A stripchart is similar to a scatterplot, but plots all data points of a single
+data set horizontally or vertically. This is particularly useful in combination with a factor 
+that distinguishes members from different experimental conditions or patients groups.
+
+
+\subsubsection*{Example: Visualizing gene CCND3} 
+Many visualization methods will be illustrated by the Golub
+microarray data on two sub types of leukemia. We shall concentrate 
+on the expression values of gene
+"CCND3 Cyclin D3", which are collected in row 1042 of the data matrix
+\Rfunction{golub}. To plot the data values one can simply use \Rfunction{plot(golub[1042,])}. 
+In the resulting plot  the vertical axis gives the size of the expression
+values and the horizontal axis the index of the patients. This is a scatterplot 
+of a single data set. \\
+
+ It can be observed
+that the values for patient 28 to 38 are somewhat lower, but, indeed, the
+picture is not very clear because the groups are not plotted separately.
+To produce two adjacent stripcharts one for the ALL and one for the
+AML patients, we use a factor called  \Rfunction{gol.fac} which
+separates the classes of patients.
+
+<<plotCCND3, echo = TRUE>>=
+plot(golub[1042,])
+@
+
+<<stripchartCCND3, echo = TRUE>>=
+gol.fac <- factor(golub.cl,levels=0:1, labels= c("ALL","AML"))
+stripchart(golub[1042,] ~ gol.fac, method="jitter", vertical = TRUE)
+@
+
+From the resulting figure it can be observed that the CCND3
+expression values of the ALL patients tend to have larger expression values
+than those of the AML patients. The option \Robject{jitter} will ``smear''
+the data points a little bit. A nice alternative to the default stripcharts
+is provided by the \CRANpkg{beeswarm}. The bee--swarm plot is a one-dimensional 
+scatter plot like "stripchart", but with closely-packed, non-overlapping points. 
+Different algorithms are available for creating the swarm.
+
+<<beeswarmCCND3, echo = TRUE>>=
+beeswarm(golub[1042,] ~ gol.fac, method = "center")
+@
+
+In \CRANpkg{ggplot2} these plots can be created
+like this:
+
+<<ggplot2scatter, echo = TRUE>>=
+CCND3 <- data.frame(expCCND3 = golub[1042,], patients = gol.fac)
+
+ggScatter <- qplot(seq_along(expCCND3), expCCND3, data = CCND3, geom ="point") 
+ggScatter + xlab("Index") 
+
+ggStrip <-  ggplot(CCND3, aes(x=patients, y=expCCND3))
+ggStrip + geom_point(position =  position_jitter(w = .3, h = .0))   
+@
+
+The ``jittering'' in \CRANpkg{ggplot2} occurs after the plot has been created
+and the data has been mapped to aesthetics that is why it is called a ``position
+adjustment''.  Note that the degree of jittering can be controlled 
+explicitly in \CRANpkg{ggplot2}.
+
+A beeswarm can be produced by using the output of the beeswarm call 
+which returns a data frame with the coordinates and rescaling the x–axis.
+
+<<beeswarmCCND3_ggplot, echo = TRUE>>=
+bee <- beeswarm(golub[1042,] ~ gol.fac, method = "center")
+
+qplot(x, y, data = bee) + scale_x_continuous(breaks = 1:2,
+labels = levels(gol.fac), expand = c(0, 0.5))
+
+@
+
+\subsection{Histograms}
+
+Another method to visualize data is by dividing the range of data values into
+a number of intervals and to plot the frequency per interval as a bar. Such
+a plot is called a histogram.
+
+\subsubsection*{Example: Histogram of CCND3}
+A histogram of the expression values of gene CCND3 
+of the acute lymphoblastic leukemia patients can be produced as follows:
+
+<<histCCND3, echo = TRUE>>=
+hist(golub[1042, gol.fac=="ALL"], col = "lavender")
+@
+
+The function \Rfunction{hist} divides the data into 5 intervals having width equal to
+0.5. Observe  that one value is small and the
+other ones are more or less symmetrically distributed around the mean. The number
+of bins can be adjusted by the \Rfunction{breaks} option, choosing
+\Rfunction{prob = TRUE}, will give the relative frequency for each bin on
+the $y$--axis instead of the absolute frequencies. \\
+
+
+\Rfunction{qplot()} uses binning as the default geometry if only x--values are
+supplied, so creating a histogram is really easy. By default it uses the range of
+the data divided by 30 as the binwidth. This can be easily adjusted. Here, we
+produce a barplot given the absolute counts per bin and then a classical histogram
+giving the relative frequencies.
+
+In the code below, \Rfunction{(aes(y = ..density..)} means
+that we map the y--coordinate to the relative frequency 
+estimate as returned by the \Rfunction{stat\_bin} 
+statistical transformation used  by the ``geom\_ histogram'' 
+geometry.
+
+<<ggplot2hist, echo = TRUE>>=
+CCND3.ALL <- data.frame(CCND3.ALL = golub[1042, gol.fac=="ALL"])
+ggplotAbsFreq <- qplot(golub[1042, gol.fac=="ALL"], binwidth = 0.5, 
+                       fill = I("darkslategrey"))
+
+ggplotHist <- ggplot(CCND3.ALL, aes(x=CCND3.ALL), guide=F)
+ggplotHist <- ggplotHist + geom_histogram(aes(y = ..density..), 
+                                          fill = I("darkslategrey"),
+                                          binwidth = 0.5 )
+
+
+ggplotAbsFreq
+ggplotHist
+@
+
+
+\subsection{Kernel density estimates}
+Kernel density estimates are a method to turn the histogram
+into a smooth density estimate. Given data
+$x_1, \dotsc, x_n$ and a constant called "bandwidth" $h$,
+the kernel density estimate is given by:
+
+\begin{center}
+\[
+\hat f(x)= \frac{1}{n}\sum_{i=1}^{n}  \frac{1}{h}K\left( \frac{x-x_i}{h} \right) 
+\]
+\end{center}
+
+Typical kernels are:
+\begin{itemize}
+\item Bisquare kernel: $K(u) = \frac{15}{16}(1-u^2)^2 \; \text{ for } u \in [-1,1] \; \text{and} \; 0 \text{ otherwise }$
+\item Gau{\ss} kernel: $K(u) = \frac{1}{\sqrt{2\pi}} \exp\Biggl(-\frac{1}{2} u^2  \Biggr) \; \text{ for } \; u \in \mathbb{R}$ 
+\end{itemize}
+
+They readily computed using the \R{}  \hspace{2pt} function \Rfunction{density} or the appropriate
+ggplot statistical transformation, which uses this function.
+
+<<ggplot2density, echo = TRUE>>=
+CCND3.ALL <- data.frame(CCND3.ALL = golub[1042, gol.fac=="ALL"])
+ qplot(golub[1042, gol.fac=="ALL"], geom = "density")
+@
+
+Since we do not have many data points, the kernel density estimates 
+gives a somewhat different impression than the histogram. Also note 
+that kernel density estimates do not respect the boundaries of the
+data set by default.
+
+\subsection{Boxplots}
+It is always possible to sort $n$ data values to have increasing order $x_1 \leq 
+x_2 \leq \dots \leq x_n$ , where $x_1$ is the smallest, $x_2$ is the first--to--the 
+smallest, etc. 
+
+Let $x_{0.25}$ be a number for which it holds that 25\% of the data values 
+$x_1 , \dotsc, x_n$ are smaller. That is, 25\% of the data values 
+lay on the left side of the number $x_{0.25}$, the reason for which it is called the first quartile or the 25th percentile. \\
+
+
+The second quartile is the value $x_{0.5}$ such that 50\% of the data values are
+smaller. It is also called the median. 
+Similarly, the third quartile or 75th percentile is the value $x_{0.75}$ such
+that 75\% of the data is smaller.\\
+
+A popular method to display data is by drawing a box around the first and the 
+third quartile, a bold line segment for the median, and the
+smaller line segments (whiskers) for the smallest and
+the largest data values. Such a data display is known as a box--and--whisker
+plot or simply boxplot.
+
+
+\subsubsection*{Example: Boxplot of CCND3}
+A view on the distribution of the expression values of the
+ALL and the AML patients on gene CCND3  can be obtained by
+constructing two separate boxplots adjacent to one another. To produce such
+a plot the factor gol.fac is again very useful.
+%
+<<boxplotCCND3, echo = TRUE>>=
+boxplot(golub[1042,] ~ gol.fac)
+@
+%
+
+In \CRANpkg{ggplot2} a boxplot can be exactly as a stripchart,
+we just have to change the geometry of the plot:
+
+<<ggBox >>=
+ggBox <-  ggplot(CCND3, aes(x=patients, y=expCCND3, color = patients))
+ggBox + geom_boxplot() 
+@
+
+From the position of the boxes,  it can be observed that the gene
+expression values for ALL are larger than those for AML. Furthermore, since
+the two sub-boxes around the median are more or less equally wide, the data
+are quite symmetrically distributed around the median. The quantiles can
+be computed with the function  \Rfunction{quantile}. By default the four
+``quartiles'' are returned but other quantiles can be obtained by specifying
+the \Rfunction{probs} parameter
+
+<<quantilesCCND3,  echo = TRUE>>=
+quantile(golub[1042,])
+## custom quantiles
+quantile(golub[1042,], probs = c(0, 0.1, 0.5))
+@
+
+Outliers are data values laying far apart from the pattern set by the
+majority of the data values. The implementation in \R{} of the (modified)
+boxplot draws such outlier points separately as small circles. A data point
+$x$ is defined as an outlier point if
+\begin{gather*}
+x < x_{0.25} - 1.5 \cdot (x_{0.75} - x_{0.25} )
+\intertext{or} 
+x > x_{0.75} + 1.5  \cdot (x_{0.75} - x_{0.25} )
+\end{gather*}
+
+From the boxplot above it can be observed that there are outliers among the gene
+expression values of ALL patients. These are the smaller values 0.45827 and
+1.10546, and the largest value 2.76610. The AML expression values have one
+outlier with value -0.74333.
+To define extreme outliers, the factor 1.5 is raised to 3.0.  
+These numbers can be conveniently extracted from the 
+\Rfunction{boxplot.stats} function:
+
+<<boxplot.stats,  echo = TRUE>>=
+boxplot.stats(golub[1042, gol.fac == "ALL"])
+### outliers are in the "out" element of the list 
+@
+
+\subsection{Violin plots}
+
+A violin plot is a combination of a boxplot and a kernel density estimate. 
+Specifically, instead of straight borders for the boxes, a kernel density estimate
+is displayed. 
+
+<<Violin plot example >>=
+vioplot(split(golub[1042,],  gol.fac)[[1]], split(golub[1042,],  gol.fac)[[2]],
+        names = c("ALL", "AML"))
+ggBox + geom_violin() 
+@
+
+
+\subsection{Empirical cumulative distribution function}
+Another way to visualize data is the empirical cumulative distribution function 
+(ecdf). It is an estimator for the actual  cumulative distribution function,
+which gives the probability of observing values less than a given value $t$.
+Especially if you have a large number
+of data points, it gives a useful visualization tool for your data.
+For every number $t$ the ecdf  $\hat F_n(t)$ is the fraction of data points
+that are smaller than $t$.
+
+\begin{gather*}
+    \hat F_n(t) = \frac{ \mbox{number of elements in the sample} \leq t}n  
+%\frac{1}{n} \sum_{i=1}^n \mathbf{1}\{x_i \le t\},
+\end{gather*}
+Obviously, just as the cdf the ecdf will always start 0 and end up at
+1. You can easily read off quantiles from the ecdf, since the $y$--axis
+represents the quantiles of the data. 
+
+\subsubsection*{Example: ECDF of CCND3}
+From the plot of the ecdf of CCND3, it can be seen that the
+median of the overall data is roughly 1.8. The steep increase of the ecdf for
+values greater than the median shows that larger values are more more common
+in the data set.
+
+<<ecdfCCND3, fig.height=5, echo = TRUE>>=
+plot(ecdf(golub[1042, ]) , main = "ecdf of CCND3")
+@
+
+In \CRANpkg{ggplot2} there exists a specialized statistic which performs
+the calculation necessary to obtain the ecdf. It also easy to split the
+ecdf calculation by a factor, here we clearly see that for CCND3, 
+the expression for ALL patients is always higher than the expression for
+AML patients.
+
+<<ggecdfCCND3, fig.height=5, echo = TRUE>>=
+ggECDF <-  ggplot(CCND3, aes(x=expCCND3, color = patients))
+ggECDF + stat_ecdf(geom = "step", size = 2) + ylab("Frequency")
+@
+
+
+\subsection{quantile--quantile (QQ) plot}
+A method to compare the (e)cdf of  a data set to another (e)cdf is  
+so--called quantile-quantile (Q--Q) plot. In such a plot, usually the quantiles of the
+of the data set are displayed against the corresponding quantiles of
+the normal distribution (bell--shaped). Hence, the empirical cdf of the
+data are compared to the (corresponding) normal cdf.  \\
+
+A straight line is added representing points which
+correspond exactly to the quantiles of a corresponding normal distribution. 
+By observing the extent in which the points appear on the line, it can be evaluated to
+what degree the data are normally distributed. That is, the closer the  
+values appear to the line, the more likely it is that the data are
+normally distributed. To produce a Q--Q plot of the ALL gene expression values
+of CCND3  one may use the following code \\
+
+
+<<QQCCND3, fig.height=5, echo = TRUE>>=
+qqnorm(golub[1042, gol.fac=="ALL"])
+qqline(golub[1042, gol.fac=="ALL"])
+@
+
+From the resulting figure it can be observed that most of the data points
+are on or near the straight line, while a few others are further away.
+This is an expected behavior for gene expression data. The above example 
+illustrates a case where the degree of non--normality
+is moderate so that a clear conclusion cannot be drawn. \\
+
+The QQ--plot can  also be used to compare the distributions of 
+two data sets to one another by plotting their quantiles against each other. 
+In order to do this, you can call the function \Rfunction{qqplot}. A comparison
+of the distributions / ecdfs of AML and ALL gene expression values is given by:
+
+<<QQCCND3vs, fig.height=5, echo = TRUE>>=
+qqplot(golub[1042, gol.fac=="ALL"], golub[1042, gol.fac=="AML"])
+@
+
+As we can see, the quantiles lie on a straight line, which indicates that
+their general shape agrees. However, they might have different means and
+standard deviations.
+
+
+In \CRANpkg{ggplot2}  there exists a specialized statistic which performs
+the calculation necessary to obtain the QQ--plot. The qnorm equivalent is
+a bit harder to obtain, we have to extract the augmented data frame returned
+by the \Rfunction{stat\textunderscore qq} function and add a linear smoother.
+
+<<ggQQplotCCND3, fig.height=5, echo = TRUE>>=
+ggQQ <-  ggplot(CCND3.ALL, aes(sample=CCND3.ALL)) +  stat_qq()
+#ggQQ 
+temp <- cbind(CCND3.ALL, 
+           as.data.frame((print(ggQQ)$data)[[1]][, c( "sample", "theoretical")]))
+ggQQ + stat_smooth(mapping = aes(x = theoretical, y = sample), 
+                   data = temp, method = "lm", se = F )
+
+@
+
+
+
+\section{Descriptive statistics}
+There exist various ways to describe the central tendency as well as the spread
+of data. In particular, the central tendency can be described by the mean or
+the median, and the spread by the variance, standard deviation, interquartile
+range, or median absolute deviation. These will be defined and illustrated.
+
+
+\subsection{Measures of central tendency}
+The most important descriptive statistics for central tendency are the mean
+and the median. The sample mean of the data values $x_1, \dotsc, x_n$ is defined
+as:
+
+\begin{gather*}
+\overline x =\frac{1}{k} \sum_{i=1}^k x_{i}
+= \frac{1}{n} \left( x_{1} + \dotso + x_{n}\right).
+\end{gather*}
+
+Thus the sample mean is simply the average of the $n$ data values. Since it
+is the sum of all data values divided by the sample size, a few extreme data
+values may largely influence its size. In other words, the mean is not robust
+against outliers. \\
+
+The median is defined as the second quartile or the 50th percentile, and
+is denoted by $x_{0.50}$. When the data are symmetrically distributed around the
+mean, then the mean and the median are equal. Since extreme data values
+do not influence the size of the median, it is very robust against outliers.
+Robustness is important in biological applications because data are frequently contaminated 
+by extreme or otherwise influential data values.
+
+\subsubsection*{Example: mean and median of CCND3} 
+To compute the mean and median of the ALL expression
+values of gene CCND3 Cyclin D3 consider the following.
+
+
+<<meanMedianCCND3,   echo = TRUE>>=
+mean(golub[1042, gol.fac=="ALL"])
+median(golub[1042, gol.fac=="ALL"])
+@
+
+Note that the mean and the median do not differ much so that the distribution 
+seems to be quite symmetric.
+
+\subsection{Measures of spread}
+The most important measures of spread are the standard deviation, the interquartile range, 
+and the median absolute deviation. The standard deviation
+is the square root of the sample variance, which is defined as
+
+
+\begin{gather*}
+s^2 =\frac{1}{k - 1} \sum_{i=1}^k (x_{i} - \overline x)^{2}
+= \frac{1}{n} \left( (x_{1} - \overline x)^{2} + \dotso + (x_{n} - \overline x)^{2}\right).
+\end{gather*}
+
+Hence, it is the average of the squared differences between the data values
+and the sample mean. The sample standard deviation $s$ is the square root
+of the sample variance and may be interpreted as the distance of the data
+values to the mean. The variance and the standard deviation are not robust
+against outliers. \\
+
+The interquartile range is defined as the difference between the third and
+the first quartile, that is $x_{0.75} - x_{0.25}$. It can be computed by the function
+\Rfunction{IQR(x)}. More specifically, the value \Rfunction{IQR(x)/1.349}
+ is a robust estimator of
+the standard deviation.  \\
+
+The median absolute deviation (MAD) is defined as
+a constant times the median of the absolute deviations of the data from the
+median. In \R{} it is computed by the
+function \Rfunction{mad} defined as the median of the sequence
+$|x_1  - x_{0.5} |, \dotsc, |x_n - x_{0.5} |$
+multiplied by the constant 1.4826. It equals the standard deviation in case
+the data come from a bell--shaped (normal) distribution.
+Because the interquartile range and the median absolute deviation are based
+on quantiles, these are robust against outliers.
+
+
+\subsubsection*{Example: Measures of spread for CCND3} These measures of spread 
+for the ALL expression values of gene CCND3 can be computed as follows.
+
+<<spreadCCND3,   echo = TRUE>>=
+sd(golub[1042, gol.fac=="ALL"])
+IQR(golub[1042, gol.fac=="ALL"]) / 1.349
+mad(golub[1042, gol.fac=="ALL"])
+@
+
+Due to the three outliers (cf. boxplot above) the standard deviation is larger
+than the interquartile range and the mean absolute deviation. That is, the
+absolute differences with respect to the median are somewhat smaller than
+the root of the squared differences.
+
+\subsubsection*{Exercise: Illustration of mean and standard deviation}
+
+
+\begin{enumerate}[label=(\emph{\alph*})]
+ \item Compute the mean and the standard deviation for 1, 1.5, 2, 2.5, 3.
+\item Compute the mean and the standard deviation for 1, 1.5, 2, 2.5, 30.
+ \item Comment on the differences.
+\end{enumerate}
+
+\subsubsection*{Exercise: Plotting gene expressions of CCND3}
+Use the gene expressions from "CCND3" of Golub collected in row
+1042 of the object golub.
+\begin{enumerate}[label=(\emph{\alph*})]
+
+\item  Produce a  stripchart for the gene expressions separately
+for the ALL as well as for the AML patients. Hint: Use a factor
+for appropriate separation.
+\item  Rotate the plot to a vertical position and keep it that way for the
+questions to come.
+\item  Color the ALL expressions red and AML blue. Hint: Use the \Robject{col}
+parameter.
+\item  Add a title to the plot. Hint: Use \Robject{title}.
+\item   Change the boxes into stars. Hint: Use the \Robject{pch} parameter.
+\end{enumerate}
+
+\subsubsection*{Exercise: Plotting gene expressions using \CRANpkg{ggplot2}}
+In this exercise we will plot the gene expressions for a couple
+of genes in the golub data set in a single figure, using a separate 
+panel for each gene.
+
+\begin{enumerate}[label=(\emph{\alph*})]
+\item Turn the golub data set into a 
+data frame with genes in the columns. Add the
+group descriptor \Robject{gol.fac} as a additional
+column and turn it into a factor.
+
+\item Select a random sample of 6 genes from the golub
+data. HINT: Use the function \Rfunction{sample} to do this.
+
+\item Melt the resulting data frame containing the selected genes
+in such a way that all the gene expression values are in 
+a single column.
+
+\item Use this data frame and \CRANpkg{ggplot2} to produce
+a pdf file containing boxplots separated per patient group for each
+of the randomly selected genes. Also add the raw data points 
+to the plot.
+\end{enumerate}
+
+
+
+\subsubsection*{Exercise: Comparing normality for two genes} 
+Consider the gene expression values in row 790 and 66 of the Golub data.
+
+\begin{enumerate}[label=(\emph{\alph*})] 
+ \item Produce a boxplot for the expression values of the ALL patients
+and comment on the differences. Are there outliers?
+\item Produce a QQ-plot and formulate a hypothesis about the normality of the genes.
+ \item Compute the mean and the median for the expression values of
+the ALL patients and compare these. Do this for both genes.
+\end{enumerate}
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Answers to Exercises}
+
+\subsubsection*{Exercise: Simple ggplot usage }
+\begin{enumerate}[label=(\emph{\alph*})]
+
+\item Use points as a geometry instead of lines
+\item Use both lines and points
+\item Add errorbars \Robject{geom\textunderscore errorbar} to the plot.
+This requires  further aesthetics: 
+\Robject{ymax} and \Robject{ymin}. 
+The estimated error is stored in the variable \Robject{Sigma}.
+
+\end{enumerate}
+
+\subsubsection*{Solution: Simple ggplot usage }
+<<sol-simple-ggplot,   echo = TRUE,  eval = TRUE, results='hide'>>=
+#a
+##########################################################
+plot_1 <- ggplot(aes( x = min, y = Signal ), data = proteins_pMek_sub)
+plot_1 <- plot_1 + geom_point()
+plot_1 <- plot_1  + xlab("Time [min]") + ylab("pMEK Signal")
+
+#b
+##########################################################
+plot_1 <- plot_1 + geom_line()
+ 
+#c
+##########################################################
+plot_1 <- plot_1 + geom_errorbar(aes(ymax = Signal+2*Sigma, 
+ymin = Signal-2*Sigma))
+@
+
+\xhrulefill{BiocBlue}{1pt}
+
+\subsubsection*{Exercise: ggplot faceting}
+ 
+Using the data \Robject{proteins\textunderscore pMek\textunderscore sub}, 
+to produce a plot split by the experimental condition factor using 
+\Rfunction{facet\textunderscore wrap()}. 
+
+\subsubsection*{Solution: ggplot faceting}
+<<sol-facets-ggplot,   echo = TRUE,  eval = TRUE, results='hide', fig.keep='none'>>=
+(qplot(min, Signal, data = proteins_pMek, geom = "line", color = Condition) 
++ facet_wrap( ~ Condition) + geom_errorbar(aes(ymax = Signal+2*Sigma, 
+ymin = Signal-2*Sigma)))
+@
+
+\xhrulefill{BiocBlue}{1pt}
+
+\subsubsection*{Exercise: complex ggplot example}
+ 
+Use the data \Robject{proteins}, to produce 
+a plot of the time courses  split by the experimental 
+target and colored according to the experimental 
+conditions. Add error bars to your plot.
+
+
+\subsubsection*{Solution: complex ggplot example}
+<<sol-complex-ggplot,   echo = TRUE,  eval = TRUE, results='hide', fig.keep='none'>>=
+(qplot(min, Signal, data = proteins, geom = "line", color = Condition) 
++ facet_wrap( ~ Target, ncol = 2) + geom_errorbar(aes(ymax = Signal+2*Sigma, 
+                                                  ymin = Signal-2*Sigma)))
+@
+
+\xhrulefill{BiocBlue}{1pt}
+
+\subsubsection*{Exercise: Illustration of mean and standard deviation}
+
+
+\begin{enumerate}[label=(\emph{\alph*})] 
+ \item Compute the mean and the standard deviation for 1, 1.5, 2, 2.5, 3.
+\item Compute the mean and the standard deviation for 1, 1.5, 2, 2.5, 30.
+ \item Comment on the differences.
+\end{enumerate}
+
+\subsubsection*{Solution:  Illustration of mean and standard deviation}
+<<sol-mean-sd,   echo = TRUE,  eval = TRUE, results='hide',>>=
+#Use 
+x<- c(1,1.5,2,2.5,3) 
+
+#and
+mean(x) 
+
+sd(x) 
+#to obtain
+#that the mean is 2 and the standard deviation is 0.79
+
+#(b) Now the mean is 7.4 and  the standard deviation dramatically increased 
+#(c) The outlier increased the mean as well as the standard deviation.
+@
+
+\xhrulefill{BiocBlue}{1pt}
+
+
+\subsubsection*{Exercise: Plotting gene expressions of CCND3}
+Use the gene expressions from "CCND3" of Golub collected in row
+1042 of the object golub.
+\begin{enumerate}[label=(\emph{\alph*})]
+
+\item  Produce a so-called stripchart for the gene expressions separately
+for the ALL as well as for the AML patients. Hint: Use a factor
+for appropriate separation.
+\item  Rotate the plot to a vertical position and keep it that way for the
+questions to come.
+\item  Color the ALL expressions red and AML blue. Hint: Use the \Robject{tcol}
+parameter.
+\item  Add a title to the plot. Hint: Use \Robject{title}.
+\item   Change the boxes into stars. Hint: Use the \Robject{pch} parameter.
+\end{enumerate}
+
+\subsubsection*{Solution: Plotting gene expressions of CCND3}
+<<sol-CCND3-plot,   echo = TRUE,  eval = TRUE, results='hide', fig.keep='none'>>=
+gol.fac <- factor(golub.cl,levels=0:1, labels= c("ALL","AML"))
+stripchart(golub[1042,] ~ gol.fac,method="jitter")
+stripchart(golub[1042,] ~ gol.fac,method="jitter",vertical = TRUE)
+stripchart(golub[1042,] ~ gol.fac,method="jitter",col=c("red", "blue"),
+vertical = TRUE)
+stripchart(golub[1042,] ~ gol.fac,method="jitter",col=c("red", "blue"), pch="*"
+,vertical = TRUE)
+title("CCND3 Cyclin D3 expression value for ALL and AMl patients")
+@
+
+
+\xhrulefill{BiocBlue}{1pt}
+
+\subsubsection*{Exercise: Plotting gene expressions using \CRANpkg{ggplot2}}
+In this exercise we will plot the gene expressions for a couple
+of genes in the golub data set in a single figure, using a separate 
+panel for each gene.
+
+\begin{enumerate}[label=(\emph{\alph*})]
+\item Turn the golub data set into a 
+data frame with genes in the columns. Add the
+group descriptor \Robject{gol.fac} as a additional
+column and turn it into a factor.
+
+\item Select a random sample of 6 genes from the golub
+data. HINT: Use the function \Rfunction{sample} to do this.
+
+\item Melt the resulting data frame containing the selected genes
+in such a way that all the gene expression values are in 
+a single column.
+
+\item Use this data frame and \CRANpkg{ggplot2} to produce
+a pdf file containing boxplots separated per patient group for each
+of the randomly selected genes. Also add the raw data points 
+to the plot.
+\end{enumerate}
+
+
+
+\subsubsection*{Solution: Plotting gene expressions using \CRANpkg{ggplot2}}
+<<sol-GeneExprssion-ggplot2-plot,   echo = TRUE, eval = TRUE, results='hide'>>=
+#a
+###############################################################
+golub.df <- as.data.frame(cbind(t(golub), gol.fac))
+golub.df$gol.fac <- as.factor(golub.df$gol.fac)
+
+#b
+###############################################################
+rand.sample <- c(sample(dim(golub)[1],6),3052)
+
+#c
+###############################################################
+# with tidyr - gather and chaining
+dataForPlot <- golub.df %>% 
+  select(rand.sample) %>%
+  gather(key = gene, value = exp, -gol.fac) 
+
+#e
+###############################################################
+pdf("boxplots.pdf", width = 14, height = 10)
+p <- qplot(gol.fac, exp,  data = dataForPlot) + 
+  geom_boxplot(aes(fill = gol.fac)) +
+  facet_wrap(~ gene) +
+  geom_point(colour = 'black', alpha = 0.5) 
+p
+dev.off()
+@
+
+\xhrulefill{BiocBlue}{1pt}
+
+\subsubsection*{Exercise: Comparing normality for two genes} 
+Consider the gene expression values in row 790 and 66 of the Golub data.
+
+\begin{enumerate}[label=(\emph{\alph*})] 
+ \item Produce a boxplot for the expression values of the ALL patients
+and comment on the differences. Are there outliers?
+\item Produce a QQ-plot and formulate a hypothesis about the normality of the genes.
+ \item Compute the mean and the median for the expression values of
+the ALL patients and compare these. Do this for both genes.
+\end{enumerate}
+
+\subsubsection*{Solution: Comparing normality for two genes}
+
+<<sol-compare,   echo = TRUE, eval = FALSE>>=
+#Comparing two genes
+#(a) Use 
+boxplot(golub[66,]~gol.fac) 
+dev.new()
+boxplot(golub[790,]~gol.fac) 
+#to observe that 790 has three
+#outliers and 66 has no outlier.
+# (dev.new() opens a new graphical window)
+
+#(b) Use 
+qqnorm(golub[66,gol.fac=="ALL"]) 
+qqline(golub[66,gol.fac=="ALL"])
+dev.new()
+qqnorm(golub[790,gol.fac=="ALL"]) 
+qqline(golub[790,gol.fac=="ALL"])
+#to observe that nearly all values of 66 are on the line, where as for
+#790 the three outliers are way of the normality line. Hypothesis:
+#The expression values of 66 are normally distributed, but those of
+#row 790 are not.
+
+#(c) Use 
+mean(golub[66,gol.fac=="ALL"]) 
+median(golub[790,gol.fac=="ALL"])
+#and# 
+mean(golub[790,gol.fac=="ALL"])
+median(golub[790,gol.fac=="ALL"])
+#The mean (-1.174024) is larger than the median (-1.28137) due to
+#outliers on the right hand side. For the gene in row 66 the mean is
+#1.182503 and the median 1.23023. The differences are smaller.
+@
+
+
+\section*{Session Info}
+
+<< sessionInfo, cache=FALSE, results='asis'>>=
+toLatex(sessionInfo())
+@
+
+
+\end{document}
